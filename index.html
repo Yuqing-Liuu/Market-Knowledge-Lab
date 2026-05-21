@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Market Knowledge Lab</title>
+    <meta
+      name="description"
+      content="A stock, options, market microstructure, and quant finance knowledge map."
+    />
+    <meta property="og:title" content="Market Knowledge Lab" />
+    <meta
+      property="og:description"
+      content="Explore stocks, options, market mechanics, Greeks, risk, macro, data tools, and quant models."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Knowledge navigation">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">MK</div>
+          <div>
+            <h1>Market Knowledge Lab</h1>
+            <p>Stocks, options, microstructure, quant</p>
+          </div>
+        </div>
+
+        <div class="search-wrap">
+          <span aria-hidden="true">⌕</span>
+          <input id="searchInput" type="search" placeholder="搜索 gamma / sell put / beta" />
+        </div>
+
+        <nav id="categoryNav" class="category-nav" aria-label="Categories"></nav>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Knowledge Operating System</p>
+            <h2 id="pageTitle">All Topics</h2>
+          </div>
+          <div class="topbar-actions" role="tablist" aria-label="Workspace views">
+            <button class="view-tab active" data-view="map" type="button">Map</button>
+            <button class="view-tab" data-view="lab" type="button">Strategy Lab</button>
+          </div>
+        </header>
+
+        <section id="mapView" class="view-panel">
+          <section id="categorySummary" class="summary-grid" aria-label="Category overview"></section>
+
+          <section class="workspace">
+            <div class="list-pane">
+              <div class="pane-head">
+                <span id="topicCount">0 topics</span>
+                <select id="sortSelect" aria-label="Sort topics">
+                  <option value="name">Name</option>
+                  <option value="difficulty">Difficulty</option>
+                  <option value="category">Category</option>
+                </select>
+              </div>
+              <div id="topicList" class="topic-list"></div>
+            </div>
+
+            <article class="detail-pane">
+              <div id="topicDetail" class="topic-detail"></div>
+            </article>
+
+            <aside class="graph-pane" aria-label="Knowledge graph">
+              <div class="pane-head">
+                <span>Related Map</span>
+                <button id="focusBtn" class="mini-btn" type="button">Center</button>
+              </div>
+              <svg id="knowledgeGraph" viewBox="0 0 520 520" role="img" aria-label="Topic relationship graph"></svg>
+            </aside>
+          </section>
+        </section>
+
+        <section id="labView" class="view-panel hidden">
+          <section class="lab-grid">
+            <article class="lab-card">
+              <div class="card-head">
+                <p class="eyebrow">Option Payoff</p>
+                <h3>期权到期收益计算器</h3>
+              </div>
+              <div class="control-grid">
+                <label>
+                  <span>Strategy</span>
+                  <select id="strategySelect">
+                    <option value="buyCall">Buy Call</option>
+                    <option value="sellPut">Sell Put</option>
+                    <option value="coveredCall">Covered Call</option>
+                    <option value="protectivePut">Protective Put</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Spot</span>
+                  <input id="spotInput" type="number" value="100" min="1" step="1" />
+                </label>
+                <label>
+                  <span>Strike</span>
+                  <input id="strikeInput" type="number" value="100" min="1" step="1" />
+                </label>
+                <label>
+                  <span>Premium</span>
+                  <input id="premiumInput" type="number" value="4" min="0" step="0.1" />
+                </label>
+              </div>
+              <div id="payoffStats" class="stat-grid"></div>
+              <svg id="payoffChart" viewBox="0 0 720 280" class="payoff-chart" role="img" aria-label="Option payoff chart"></svg>
+            </article>
+
+            <article class="lab-card">
+              <div class="card-head">
+                <p class="eyebrow">Rolling</p>
+                <h3>Rollover 直觉表</h3>
+              </div>
+              <div class="roll-table">
+                <div><strong>Roll out</strong><span>同一 strike 延后到期，换时间价值，通常是在还想保留方向判断时。</span></div>
+                <div><strong>Roll up</strong><span>提高 strike，常见于 covered call 锁定更多上行空间。</span></div>
+                <div><strong>Roll down</strong><span>降低 strike，常见于 short put 风险下移或 covered call 防守。</span></div>
+                <div><strong>Roll for credit</strong><span>新仓收入大于平旧仓成本，现金流为正，但风险可能变长。</span></div>
+                <div><strong>Roll for debit</strong><span>付钱调整仓位，通常是在买保护、减少尾部风险或修正方向。</span></div>
+              </div>
+            </article>
+
+            <article class="lab-card wide">
+              <div class="card-head">
+                <p class="eyebrow">Mechanism</p>
+                <h3>Gamma squeeze 因果链</h3>
+              </div>
+              <div class="flow">
+                <span>短期期权需求</span>
+                <span>做市商卖出期权</span>
+                <span>Delta 对冲买股</span>
+                <span>股价接近集中 strike</span>
+                <span>Gamma 放大再对冲</span>
+                <span>上涨/下跌反馈加速</span>
+              </div>
+            </article>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
