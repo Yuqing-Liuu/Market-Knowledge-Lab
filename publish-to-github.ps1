@@ -43,6 +43,7 @@ if ($pending) {
   Write-Host "No local changes to commit."
 }
 
+git pull --rebase origin main
 git push -u origin main
 
 Write-Host ""
