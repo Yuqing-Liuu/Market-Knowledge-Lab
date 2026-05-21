@@ -135,6 +135,9 @@ const els = {
   holdingStrike: document.querySelector("#holdingStrike"),
   holdingExpiration: document.querySelector("#holdingExpiration"),
   holdingNotes: document.querySelector("#holdingNotes"),
+  finnhubKeyInput: document.querySelector("#finnhubKeyInput"),
+  saveFinnhubKeyBtn: document.querySelector("#saveFinnhubKeyBtn"),
+  refreshPricesBtn: document.querySelector("#refreshPricesBtn"),
   exportPortfolioBtn: document.querySelector("#exportPortfolioBtn"),
   importPortfolioInput: document.querySelector("#importPortfolioInput"),
   strategySelect: document.querySelector("#strategySelect"),
@@ -149,6 +152,7 @@ const topicById = Object.fromEntries(TOPICS.map((item) => [item.id, item]));
 const categoryById = Object.fromEntries(CATEGORIES.map((item) => [item.id, item]));
 const difficultyRank = { basic: 1, intermediate: 2, advanced: 3 };
 const PORTFOLIO_KEY = "market-knowledge-portfolio-v1";
+const FINNHUB_KEY = "market-knowledge-finnhub-key";
 const STARTER_HOLDINGS = [
   starterStock("MU"),
   starterStock("INTC"),
@@ -488,6 +492,7 @@ function loadPortfolio() {
   } catch {
     state.portfolio = STARTER_HOLDINGS;
   }
+  els.finnhubKeyInput.value = localStorage.getItem(FINNHUB_KEY) || "";
 }
 
 function savePortfolio() {
@@ -495,6 +500,59 @@ function savePortfolio() {
     PORTFOLIO_KEY,
     JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), holdings: state.portfolio }),
   );
+}
+
+function saveFinnhubKey() {
+  const key = els.finnhubKeyInput.value.trim();
+  if (key) {
+    localStorage.setItem(FINNHUB_KEY, key);
+    window.alert("Finnhub key saved in this browser.");
+  } else {
+    localStorage.removeItem(FINNHUB_KEY);
+    window.alert("Finnhub key removed.");
+  }
+}
+
+async function refreshPrices() {
+  const key = (els.finnhubKeyInput.value.trim() || localStorage.getItem(FINNHUB_KEY) || "").trim();
+  if (!key) {
+    window.alert("Paste a Finnhub API key first, then click Save Key.");
+    return;
+  }
+
+  els.refreshPricesBtn.disabled = true;
+  els.refreshPricesBtn.textContent = "Refreshing...";
+
+  try {
+    const symbols = [...new Set(state.portfolio.map((item) => item.symbol).filter(Boolean))];
+    const quotes = await Promise.all(symbols.map(async (symbol) => {
+      const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(key)}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Quote failed for ${symbol}`);
+      const data = await response.json();
+      return [symbol, data];
+    }));
+
+    const quoteBySymbol = Object.fromEntries(quotes);
+    state.portfolio = state.portfolio.map((holding) => {
+      const quote = quoteBySymbol[holding.symbol];
+      if (!quote || !Number(quote.c)) return holding;
+      return {
+        ...holding,
+        price: String(quote.c),
+        lastChange: quote.d,
+        lastChangePercent: quote.dp,
+        lastUpdated: quote.t ? new Date(quote.t * 1000).toISOString() : new Date().toISOString(),
+      };
+    });
+    savePortfolio();
+    renderPortfolio();
+  } catch (error) {
+    window.alert(`Price refresh failed: ${error.message}`);
+  } finally {
+    els.refreshPricesBtn.disabled = false;
+    els.refreshPricesBtn.textContent = "Refresh Prices";
+  }
 }
 
 function holdingMath(holding) {
@@ -559,6 +617,7 @@ function renderPortfolio() {
           <span>Price <strong>${holding.price ? money(holding.price) : "-"}</strong></span>
           <span>P/L <strong class="${math.pnl >= 0 ? "positive" : "negative"}">${holding.qty && holding.cost && holding.price ? money(math.pnl) : "-"}</strong></span>
         </div>
+        ${holding.lastUpdated ? `<p class="holding-detail">Quote ${changeText(holding)} · ${new Date(holding.lastUpdated).toLocaleString()}</p>` : ""}
         ${holding.kind === "option" ? `<p class="holding-detail">Strike ${holding.strike || "-"} · Exp ${holding.expiration || "-"}</p>` : ""}
         ${holding.notes ? `<p class="holding-notes">${escapeHtml(holding.notes)}</p>` : ""}
         <div class="holding-tags">${related.map((item) => `<span>${item}</span>`).join("")}</div>
@@ -582,6 +641,14 @@ function labelForSide(side) {
     sellPut: "Sell Put",
     sellCall: "Sell Call",
   }[side] || side;
+}
+
+function changeText(holding) {
+  const change = Number(holding.lastChange);
+  const pct = Number(holding.lastChangePercent);
+  if (!Number.isFinite(change) || !Number.isFinite(pct)) return "updated";
+  const sign = change >= 0 ? "+" : "";
+  return `${sign}${change.toFixed(2)} (${sign}${pct.toFixed(2)}%)`;
 }
 
 function formHolding() {
@@ -742,6 +809,9 @@ els.portfolioList.addEventListener("click", (event) => {
 });
 
 els.exportPortfolioBtn.addEventListener("click", exportPortfolio);
+
+els.saveFinnhubKeyBtn.addEventListener("click", saveFinnhubKey);
+els.refreshPricesBtn.addEventListener("click", refreshPrices);
 
 els.importPortfolioInput.addEventListener("change", (event) => {
   const [file] = event.target.files;

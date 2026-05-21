@@ -709,10 +709,21 @@ ul {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  justify-content: flex-end;
 }
 
 .import-btn input {
   display: none;
+}
+
+.api-key-input {
+  min-width: 220px;
+  min-height: 34px;
+}
+
+.mini-btn:disabled {
+  cursor: progress;
+  opacity: 0.62;
 }
 
 .portfolio-stats {
