@@ -159,6 +159,7 @@ const STARTER_HOLDINGS = [
   starterStock("LITE"),
   starterStock("AAOI"),
   starterStock("NBIS"),
+  starterStock("TSM"),
   starterOption("NOK"),
   starterOption("NVDA"),
 ];
@@ -492,7 +493,19 @@ function loadPortfolio() {
   } catch {
     state.portfolio = STARTER_HOLDINGS;
   }
+  ensureStarterHoldings();
   els.finnhubKeyInput.value = localStorage.getItem(FINNHUB_KEY) || "";
+}
+
+function ensureStarterHoldings() {
+  const existing = new Set(state.portfolio.map((holding) => `${holding.kind}:${holding.symbol}`));
+  STARTER_HOLDINGS.forEach((holding) => {
+    const key = `${holding.kind}:${holding.symbol}`;
+    if (!existing.has(key)) {
+      state.portfolio.push({ ...holding, id: newId(holding.symbol) });
+    }
+  });
+  savePortfolio();
 }
 
 function savePortfolio() {
@@ -615,7 +628,7 @@ function renderPortfolio() {
           <span>Qty <strong>${holding.qty || "-"}</strong></span>
           <span>Cost <strong>${holding.cost ? money(holding.cost) : "-"}</strong></span>
           <span>Price <strong>${holding.price ? money(holding.price) : "-"}</strong></span>
-          <span>P/L <strong class="${math.pnl >= 0 ? "positive" : "negative"}">${holding.qty && holding.cost && holding.price ? money(math.pnl) : "-"}</strong></span>
+          <span>P/L <strong class="${pnlClass(math.pnl)}">${holding.qty && holding.cost && holding.price ? money(math.pnl) : "-"}</strong></span>
         </div>
         ${holding.lastUpdated ? `<p class="holding-detail">Quote ${changeText(holding)} · ${new Date(holding.lastUpdated).toLocaleString()}</p>` : ""}
         ${holding.kind === "option" ? `<p class="holding-detail">Strike ${holding.strike || "-"} · Exp ${holding.expiration || "-"}</p>` : ""}
@@ -649,6 +662,12 @@ function changeText(holding) {
   if (!Number.isFinite(change) || !Number.isFinite(pct)) return "updated";
   const sign = change >= 0 ? "+" : "";
   return `${sign}${change.toFixed(2)} (${sign}${pct.toFixed(2)}%)`;
+}
+
+function pnlClass(value) {
+  if (value > 0) return "positive";
+  if (value < 0) return "negative";
+  return "";
 }
 
 function formHolding() {

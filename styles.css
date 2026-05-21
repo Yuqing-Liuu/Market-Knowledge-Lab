@@ -849,6 +849,14 @@ ul {
   color: var(--text);
 }
 
+.holding-metrics strong.positive {
+  color: var(--green);
+}
+
+.holding-metrics strong.negative {
+  color: var(--red);
+}
+
 .holding-detail,
 .holding-notes {
   margin: 8px 0 0;
