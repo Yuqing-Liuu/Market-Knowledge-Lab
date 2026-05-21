@@ -443,6 +443,117 @@ textarea {
   gap: 14px;
 }
 
+.enhanced-detail {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 14px;
+}
+
+.enhanced-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.enhanced-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 14px;
+}
+
+.definition-card {
+  background: var(--surface-mint);
+}
+
+.formula-card {
+  background: #fff9ed;
+}
+
+.enhanced-card p {
+  margin: 0;
+  color: var(--soft);
+  line-height: 1.65;
+}
+
+.enhanced-card code {
+  white-space: normal;
+  color: #415167;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+}
+
+.visual-card {
+  background: var(--surface-blue);
+}
+
+.concept-visual {
+  display: block;
+  width: 100%;
+  min-height: 220px;
+}
+
+.chart-axis {
+  stroke: rgba(84, 104, 125, 0.4);
+  stroke-width: 1.2;
+}
+
+.chart-line,
+.visual-payoff {
+  fill: none;
+  stroke: var(--rose);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-line.blue {
+  stroke: var(--blue);
+}
+
+.chart-dot {
+  fill: #fff;
+  stroke: var(--blue);
+  stroke-width: 2;
+}
+
+.chart-dot.rose {
+  stroke: var(--rose);
+  fill: #fff7fa;
+}
+
+.concept-visual text {
+  fill: var(--muted);
+  font-size: 13px;
+}
+
+.feedback-visual {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.feedback-visual span {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 74px;
+  border: 1px solid rgba(216, 111, 145, 0.28);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--soft);
+  padding: 10px;
+  text-align: center;
+}
+
+.feedback-visual span:not(:last-child)::after {
+  content: "\2192";
+  position: absolute;
+  right: -14px;
+  color: var(--amber);
+  z-index: 1;
+}
+
 .note-grid section,
 .related-section {
   border: 1px solid var(--line);
@@ -954,6 +1065,8 @@ ul {
   .workspace,
   .lab-grid,
   .control-grid,
+  .enhanced-grid,
+  .feedback-visual,
   .note-grid,
   .flow,
   .portfolio-stats,
@@ -968,6 +1081,12 @@ ul {
   }
 
   .flow span:not(:last-child)::after {
+    content: "\2193";
+    right: auto;
+    bottom: -17px;
+  }
+
+  .feedback-visual span:not(:last-child)::after {
     content: "\2193";
     right: auto;
     bottom: -17px;

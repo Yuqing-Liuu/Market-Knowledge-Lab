@@ -164,6 +164,78 @@ const STARTER_HOLDINGS = [
   starterOption("NVDA"),
 ];
 
+const ENRICHED_TOPICS = {
+  "zero-dte": {
+    definition: "0DTE options are option contracts that expire on the same trading day. The defining feature is not simply short maturity, but extremely fast theta decay and highly sensitive gamma near the strike.",
+    formula: [
+      "DTE = trading time remaining / trading days in a year",
+      "Call intrinsic value = max(S - K, 0)",
+      "Put intrinsic value = max(K - S, 0)",
+      "Breakeven for long call = K + premium",
+      "Breakeven for long put = K - premium",
+    ],
+    example: "SPY is 500. You buy a 0DTE 502 call for 1.20. Breakeven is 503.20. If SPY closes at 504, profit is 504 - 502 - 1.20 = 0.80 per share, or $80 per contract before fees.",
+    application: ["Intraday directional trade around known catalysts", "Short-term hedge for event or index exposure", "Reading dealer hedging pressure around high open-interest strikes"],
+    visual: "payoff",
+  },
+  "gamma-squeeze": {
+    definition: "A gamma squeeze is a feedback loop where option dealer hedging can amplify stock movement. It is most relevant when short-dated option demand is concentrated and the underlying trades near key strikes.",
+    formula: [
+      "Delta hedge shares approx = option delta x contracts x 100",
+      "Change in hedge shares approx = gamma x change in stock price x contracts x 100",
+      "High gamma means delta changes quickly as spot moves",
+    ],
+    example: "If traders buy many short-dated calls, dealers may be short calls. To hedge positive customer call exposure, dealers buy shares. If the stock rises toward the strike, call delta rises, forcing more share buying.",
+    application: ["Identify crowded strikes using volume and open interest", "Watch whether spot is moving toward high-gamma zones", "Treat it as a risk amplifier, not a guaranteed direction signal"],
+    visual: "feedback",
+  },
+  "sell-put": {
+    definition: "Selling a put means receiving premium in exchange for taking the obligation to buy the underlying at the strike if assigned. A cash-secured put is economically similar to placing a limit buy order and being paid for the obligation.",
+    formula: [
+      "Max profit = premium received",
+      "Breakeven = strike - premium",
+      "Approx max loss = strike - premium, if stock goes to zero",
+      "Assignment cost basis = strike - premium",
+    ],
+    example: "You sell one MU 700 put for 25. If assigned, your effective stock cost is 675. If MU stays above 700 through expiration, the put expires worthless and you keep $2,500 before fees.",
+    application: ["Enter a stock at a target price", "Harvest premium when willing to own the stock", "Wheel strategy entry leg"],
+    visual: "sellPut",
+  },
+  "covered-call": {
+    definition: "A covered call combines long stock with a short call. The premium reduces cost basis, but upside above the strike is capped because the stock may be called away.",
+    formula: [
+      "Max profit approx = strike - stock cost + premium",
+      "Breakeven = stock cost - premium",
+      "Upside is capped above the call strike",
+    ],
+    example: "You own 100 NVDA shares at 900 and sell a 950 call for 20. Breakeven is 880. Max profit before fees is 950 - 900 + 20 = 70 per share if called away.",
+    application: ["Generate income on a stock you already own", "Reduce cost basis in sideways markets", "Define an exit price for part of a position"],
+    visual: "coveredCall",
+  },
+  alpha: {
+    definition: "Alpha is the return left over after adjusting for systematic risk exposures. In practice, alpha asks: did the strategy outperform after accounting for market beta and other factor risks?",
+    formula: [
+      "CAPM alpha: Rp - [Rf + beta x (Rm - Rf)]",
+      "Regression form: Rp - Rf = alpha + beta x (Rm - Rf) + error",
+      "Multi-factor alpha: residual return after factor exposures",
+    ],
+    example: "A portfolio returns 18%. The risk-free rate is 4%, market return is 12%, and portfolio beta is 1.2. Expected return = 4% + 1.2 x 8% = 13.6%. Alpha = 18% - 13.6% = 4.4%.",
+    application: ["Separate skill from market exposure", "Evaluate whether outperformance came from factor tilts", "Compare managers or strategies after risk adjustment"],
+    visual: "regression",
+  },
+  beta: {
+    definition: "Beta measures sensitivity to a benchmark. A beta of 1.5 means the asset has historically moved about 1.5% for a 1% benchmark move, though beta is unstable across regimes.",
+    formula: [
+      "Beta = Cov(asset return, market return) / Var(market return)",
+      "Portfolio beta = sum(position weight x position beta)",
+      "Dollar beta approx = position value x beta",
+    ],
+    example: "If your portfolio is $10,000 and beta is 1.3, a 2% market drop implies an approximate 2.6% portfolio drop, or about $260, before idiosyncratic effects.",
+    application: ["Estimate portfolio market exposure", "Size hedges with SPY/QQQ or futures", "Avoid confusing high stock count with true diversification"],
+    visual: "regression",
+  },
+};
+
 function topic(id, title, english, category, difficulty, related, summary, mechanics, pitfalls) {
   return { id, title, english, category, difficulty, related, summary, mechanics, pitfalls };
 }
@@ -295,6 +367,7 @@ function renderDetail() {
       <span class="difficulty ${item.difficulty}">${item.difficulty}</span>
     </div>
     <p class="summary">${item.summary}</p>
+    ${renderEnhancedDetail(item.id)}
     <div class="note-grid">
       <section>
         <h4>怎么理解</h4>
@@ -311,6 +384,96 @@ function renderDetail() {
         ${related.map((rel) => `<button data-topic="${rel.id}" type="button">${rel.title}<span>${rel.english}</span></button>`).join("")}
       </div>
     </section>
+  `;
+}
+
+function renderEnhancedDetail(topicId) {
+  const detail = ENRICHED_TOPICS[topicId];
+  if (!detail) return "";
+
+  return `
+    <section class="enhanced-detail">
+      <div class="enhanced-grid">
+        <article class="enhanced-card definition-card">
+          <h4>Definition / 定义</h4>
+          <p>${detail.definition}</p>
+        </article>
+        <article class="enhanced-card formula-card">
+          <h4>Formula / 公式</h4>
+          <ul>${detail.formula.map((line) => `<li><code>${line}</code></li>`).join("")}</ul>
+        </article>
+      </div>
+      <div class="enhanced-grid">
+        <article class="enhanced-card">
+          <h4>Example / 例子</h4>
+          <p>${detail.example}</p>
+        </article>
+        <article class="enhanced-card">
+          <h4>Application / 应用</h4>
+          <ul>${detail.application.map((line) => `<li>${line}</li>`).join("")}</ul>
+        </article>
+      </div>
+      <article class="enhanced-card visual-card">
+        <h4>Visual / 图示</h4>
+        ${renderTopicVisual(detail.visual)}
+      </article>
+    </section>
+  `;
+}
+
+function renderTopicVisual(type) {
+  if (type === "feedback") {
+    return `
+      <div class="feedback-visual">
+        <span>Call buying</span>
+        <span>Dealer short gamma</span>
+        <span>Delta hedge buy shares</span>
+        <span>Spot moves higher</span>
+        <span>More hedging demand</span>
+      </div>
+    `;
+  }
+
+  if (type === "regression") {
+    return `
+      <svg class="concept-visual" viewBox="0 0 520 220" role="img" aria-label="Alpha beta regression diagram">
+        <line class="chart-axis" x1="52" y1="176" x2="474" y2="176" />
+        <line class="chart-axis" x1="52" y1="176" x2="52" y2="32" />
+        <line class="chart-line blue" x1="72" y1="158" x2="444" y2="48" />
+        <circle class="chart-dot" cx="120" cy="145" r="6" />
+        <circle class="chart-dot" cx="196" cy="118" r="6" />
+        <circle class="chart-dot" cx="282" cy="96" r="6" />
+        <circle class="chart-dot rose" cx="364" cy="58" r="7" />
+        <text x="78" y="28">Return</text>
+        <text x="390" y="202">Market return</text>
+        <text x="328" y="44">alpha residual</text>
+        <text x="255" y="72">slope = beta</text>
+      </svg>
+    `;
+  }
+
+  const label = {
+    payoff: "Long option payoff",
+    sellPut: "Short put payoff",
+    coveredCall: "Covered call payoff",
+  }[type] || "Payoff";
+  const path = type === "sellPut"
+    ? "M 50 50 L 235 50 L 455 170"
+    : type === "coveredCall"
+      ? "M 50 170 L 260 70 L 455 70"
+      : "M 50 170 L 250 170 L 455 50";
+
+  return `
+    <svg class="concept-visual" viewBox="0 0 520 220" role="img" aria-label="${label}">
+      <line class="chart-axis" x1="50" y1="170" x2="470" y2="170" />
+      <line class="chart-axis" x1="260" y1="28" x2="260" y2="190" />
+      <line class="strike-line" x1="260" y1="34" x2="260" y2="184" />
+      <path class="payoff-line visual-payoff" d="${path}" />
+      <text x="58" y="202">Lower spot</text>
+      <text x="378" y="202">Higher spot</text>
+      <text x="272" y="42">strike</text>
+      <text x="54" y="32">${label}</text>
+    </svg>
   `;
 }
 
