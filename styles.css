@@ -522,6 +522,31 @@ textarea {
   fill: #fff7fa;
 }
 
+.bar.mint {
+  fill: #bfe8d3;
+}
+
+.bar.blue {
+  fill: #c7d8ff;
+}
+
+.bar.rose {
+  fill: #f1b8cb;
+}
+
+.bar.amber {
+  fill: #f2d392;
+}
+
+.distribution-fill {
+  fill: rgba(78, 121, 216, 0.12);
+}
+
+.tail-zone {
+  fill: rgba(216, 111, 145, 0.18);
+  stroke: rgba(216, 111, 145, 0.36);
+}
+
 .concept-visual text {
   fill: var(--muted);
   font-size: 13px;

@@ -234,6 +234,107 @@ const ENRICHED_TOPICS = {
     application: ["Estimate portfolio market exposure", "Size hedges with SPY/QQQ or futures", "Avoid confusing high stock count with true diversification"],
     visual: "regression",
   },
+  dcf: {
+    definition: "Discounted cash flow values a business by discounting expected future free cash flows back to today. It makes growth, margin, reinvestment, terminal value, and discount-rate assumptions explicit.",
+    formula: [
+      "Enterprise value = sum(FCF_t / (1 + WACC)^t) + Terminal value / (1 + WACC)^n",
+      "Terminal value, Gordon growth = FCF_(n+1) / (WACC - g)",
+      "Equity value = Enterprise value - net debt",
+      "Value per share = Equity value / diluted shares",
+    ],
+    example: "A company has FCF of $100, growing for 5 years, WACC of 9%, and terminal growth of 3%. Discount each yearly FCF, add discounted terminal value, subtract net debt, then divide by diluted shares.",
+    application: ["Build bull/base/bear valuation scenarios", "Test whether the current price implies realistic growth", "Understand which assumptions drive most of the valuation"],
+    visual: "dcf",
+  },
+  valuation: {
+    definition: "Valuation multiples compare market price to a business metric such as earnings, sales, EBITDA, or free cash flow. They compress expectations about growth, quality, risk, and rates into one number.",
+    formula: [
+      "P/E = market price per share / EPS",
+      "EV/Sales = enterprise value / revenue",
+      "EV/EBITDA = enterprise value / EBITDA",
+      "FCF yield = free cash flow / market cap",
+    ],
+    example: "If a stock trades at $120 and expected EPS is $6, forward P/E is 20x. If peers trade at 15x, the market is pricing higher growth, higher quality, lower risk, or overvaluation.",
+    application: ["Compare firms with similar business models", "Track multiple expansion or compression", "Translate a thesis into implied growth expectations"],
+    visual: "bars",
+  },
+  capm: {
+    definition: "CAPM estimates required return from systematic market exposure. It is a baseline model for cost of equity and for separating beta-driven returns from alpha.",
+    formula: [
+      "Expected return = Rf + beta x (Rm - Rf)",
+      "Equity risk premium = Rm - Rf",
+      "Alpha = actual return - CAPM expected return",
+    ],
+    example: "If Rf is 4%, expected market return is 10%, and beta is 1.4, required return = 4% + 1.4 x 6% = 12.4%.",
+    application: ["Estimate cost of equity", "Benchmark portfolio returns", "Think about whether return came from risk exposure or skill"],
+    visual: "regression",
+  },
+  "black-scholes": {
+    definition: "Black-Scholes-Merton is a continuous-time model for pricing European options. In practice it is most useful as a language for implied volatility and Greeks, not as a perfect description of reality.",
+    formula: [
+      "Call = S x N(d1) - K x e^(-rT) x N(d2)",
+      "Put = K x e^(-rT) x N(-d2) - S x N(-d1)",
+      "d1 = [ln(S/K) + (r + sigma^2/2)T] / [sigma sqrt(T)]",
+      "d2 = d1 - sigma sqrt(T)",
+    ],
+    example: "Given spot, strike, time, rate, and volatility, BSM outputs a theoretical option price. Traders usually invert the model to infer implied volatility from the market price.",
+    application: ["Translate option prices into implied volatility", "Compute Greeks", "Compare expensive vs cheap options across strikes and expirations"],
+    visual: "payoff",
+  },
+  var: {
+    definition: "Value at Risk estimates a loss threshold over a horizon at a confidence level. CVaR estimates the average loss after that threshold is breached.",
+    formula: [
+      "VaR_95 = loss level exceeded in the worst 5% of cases",
+      "Parametric VaR = z x portfolio volatility x portfolio value",
+      "CVaR = average(loss | loss exceeds VaR)",
+    ],
+    example: "A $100,000 portfolio with daily volatility of 2% has approximate 95% one-day VaR of 1.65 x 2% x 100,000 = $3,300, assuming normal returns.",
+    application: ["Set portfolio risk budget", "Compare tail risk across strategies", "Stress-test options and leveraged positions"],
+    visual: "distribution",
+  },
+};
+
+const FORMULA_LIBRARY = {
+  delta: ["Delta = change in option price / change in underlying price", "Approx stock-equivalent shares = delta x contracts x 100"],
+  gamma: ["Gamma = change in delta / change in underlying price", "High gamma means hedge ratio changes quickly"],
+  vega: ["Vega = change in option price for 1 vol point change in IV", "Long options are usually long vega"],
+  theta: ["Theta = change in option value as time passes", "Daily decay approx = theta / trading day"],
+  "implied-volatility": ["Option market price -> solve BSM for sigma", "Implied move approx = stock price x IV x sqrt(DTE / 365)"],
+  "realized-volatility": ["Realized vol = stdev(daily returns) x sqrt(252)", "Return_t = ln(P_t / P_(t-1))"],
+  "iv-rank": ["IV Rank = (current IV - IV low) / (IV high - IV low)", "IV Percentile = days with lower IV / total days"],
+  "vol-skew": ["Skew = IV_put_OTM - IV_call_OTM", "Smile compares IV across strikes"],
+  "portfolio-beta": ["Portfolio beta = sum(weight_i x beta_i)", "Dollar beta = market value x beta"],
+  "risk-reward": ["Expected value = win probability x average win - loss probability x average loss", "Risk/reward = potential profit / potential loss"],
+  "position-sizing": ["Position size = max dollar risk / risk per share", "Weight = position value / portfolio value"],
+  margin: ["Leverage = gross exposure / equity", "Margin cushion = equity - maintenance requirement"],
+  drawdown: ["Drawdown = current value / prior peak - 1", "Recovery needed = loss / (1 - loss)"],
+  "tail-risk": ["Tail loss = loss beyond chosen percentile", "Expected shortfall = average tail loss"],
+  "buy-call": ["Max loss = premium", "Breakeven = strike + premium", "Profit at expiry = max(S - K, 0) - premium"],
+  "buy-put": ["Max loss = premium", "Breakeven = strike - premium", "Profit at expiry = max(K - S, 0) - premium"],
+  "vertical-spread": ["Max profit = spread width - net debit, for debit spread", "Max loss = net debit", "Credit spread max loss = spread width - credit"],
+  straddle: ["Long straddle cost = call premium + put premium", "Upper breakeven = strike + total premium", "Lower breakeven = strike - total premium"],
+  "iron-condor": ["Max profit = net credit", "Max loss = spread width - net credit", "Breakevens = short put strike - credit; short call strike + credit"],
+  assignment: ["Assignment P/L depends on effective stock basis", "Short put basis = strike - premium", "Covered call sale price = strike + premium"],
+  "factor-model": ["Return = alpha + beta_1 x factor_1 + ... + beta_n x factor_n + error", "Factor exposure = regression coefficient"],
+  "fama-french": ["Excess return = alpha + beta_mkt x MKT + beta_smb x SMB + beta_hml x HML + error", "Five-factor model adds RMW and CMA"],
+  garch: ["sigma_t^2 = omega + alpha x epsilon_(t-1)^2 + beta x sigma_(t-1)^2", "Volatility clusters when alpha + beta is high"],
+  "monte-carlo": ["Estimated value = average(simulated payoffs discounted to present)", "Standard error decreases with sqrt(number of simulations)"],
+  backtesting: ["Strategy return = position_t x asset return_t - costs", "Sharpe = average excess return / return volatility"],
+  earnings: ["Surprise = reported metric - consensus estimate", "Earnings reaction = actual result vs expectations + guidance revision"],
+  eps: ["EPS = net income / diluted shares", "Forward P/E = price / expected EPS"],
+  buyback: ["Net buyback yield = net share repurchases / market cap", "Dilution = new shares issued / prior shares outstanding"],
+  rates: ["Present value = future cash flow / (1 + r)^t", "Higher discount rate lowers long-duration asset value"],
+  "yield-curve": ["Term spread = 10Y yield - 2Y yield", "Real yield = nominal yield - expected inflation"],
+  "risk-premium": ["Risk premium = expected risky return - risk-free rate", "Credit spread = corporate yield - Treasury yield"],
+  volume: ["Relative volume = current volume / average volume", "Dollar volume = price x volume"],
+  "open-interest": ["OI change = new open contracts - closed contracts", "Notional option exposure approx = OI x 100 x underlying price"],
+  "option-chain": ["Moneyness call = S / K", "Intrinsic value call = max(S - K, 0)", "Extrinsic value = option price - intrinsic value"],
+  vwap: ["VWAP = sum(price x volume) / sum(volume)", "Execution slippage = execution price - benchmark price"],
+  slippage: ["Slippage = actual execution price - expected price", "Round-trip cost approx = spread + commissions + market impact"],
+  "moving-average": ["SMA_n = average(last n closing prices)", "EMA_t = alpha x price_t + (1 - alpha) x EMA_(t-1)"],
+  "momentum-factor": ["Momentum return = price_t / price_(t-n) - 1", "Vol-adjusted momentum = return / realized volatility"],
+  "value-factor": ["Value score can use earnings yield, book-to-market, FCF yield", "Earnings yield = EPS / price"],
+  "size-factor": ["Size often measured by market cap", "Market cap = price x shares outstanding"],
 };
 
 function topic(id, title, english, category, difficulty, related, summary, mechanics, pitfalls) {
@@ -388,7 +489,8 @@ function renderDetail() {
 }
 
 function renderEnhancedDetail(topicId) {
-  const detail = ENRICHED_TOPICS[topicId];
+  const item = topicById[topicId];
+  const detail = ENRICHED_TOPICS[topicId] || buildStructuredDetail(item);
   if (!detail) return "";
 
   return `
@@ -421,6 +523,64 @@ function renderEnhancedDetail(topicId) {
   `;
 }
 
+function buildStructuredDetail(item) {
+  if (!item) return null;
+  const formula = FORMULA_LIBRARY[item.id] || genericFormulaFor(item);
+  return {
+    definition: `${item.title} (${item.english}): ${item.summary}`,
+    formula,
+    example: genericExampleFor(item),
+    application: item.mechanics,
+    visual: visualFor(item),
+  };
+}
+
+function genericFormulaFor(item) {
+  if (item.category === "options" || item.category === "greeks") {
+    return ["Payoff at expiry depends on spot price S, strike K, premium, and contract multiplier 100", "Breakeven, max loss, and max profit must be defined before entering the trade"];
+  }
+  if (item.category === "risk") {
+    return ["Risk = position size x adverse price move", "Portfolio risk depends on weight, correlation, volatility, and liquidity"];
+  }
+  if (item.category === "fundamental") {
+    return ["Value driver = growth x margin x reinvestment efficiency x valuation multiple", "Expected return approx = earnings growth + multiple change + shareholder yield"];
+  }
+  if (item.category === "macro") {
+    return ["Asset value = future cash flows discounted by rates and risk premium", "Change in valuation approx = change in expected growth - change in discount rate"];
+  }
+  if (item.category === "data") {
+    return ["Signal = current observation compared with historical baseline", "Relative measure = current value / historical average"];
+  }
+  if (item.category === "quant") {
+    return ["Model output = assumptions + parameters + data + error term", "Always compare in-sample result with out-of-sample behavior"];
+  }
+  return ["No single canonical formula; define inputs, mechanism, measurable signal, and risk before using it", "Decision value = explanatory power x actionability - trading cost - model error"];
+}
+
+function genericExampleFor(item) {
+  if (item.category === "options") {
+    return `For ${item.english}, start with a real contract: ticker, expiration, strike, premium, and side. Then compute breakeven, max loss, and what happens if the underlying moves up, down, or stays flat.`;
+  }
+  if (item.category === "greeks") {
+    return `For ${item.english}, change one variable such as spot, volatility, or time, then compare option prices. The larger the sensitivity, the more that risk factor dominates the position.`;
+  }
+  if (item.category === "fundamental") {
+    return `For ${item.english}, build a base case and then change one assumption. If a small change in growth, margin, or discount rate flips the conclusion, the thesis is assumption-sensitive.`;
+  }
+  if (item.category === "risk") {
+    return `For ${item.english}, apply it to a MU or NVDA position: if the stock moves 5% against you, how much do you lose, and does that fit your portfolio risk budget?`;
+  }
+  return `For ${item.english}, apply it to one real holding, define the observable input, compare it with a baseline, and decide whether it changes buy, sell, add, reduce, or wait.`;
+}
+
+function visualFor(item) {
+  if (item.category === "options" || item.category === "greeks") return "payoff";
+  if (item.category === "quant" || item.id.includes("beta") || item.id === "alpha") return "regression";
+  if (item.category === "fundamental") return "bars";
+  if (item.category === "risk") return "distribution";
+  return "";
+}
+
 function renderTopicVisual(type) {
   if (type === "feedback") {
     return `
@@ -448,6 +608,58 @@ function renderTopicVisual(type) {
         <text x="390" y="202">Market return</text>
         <text x="328" y="44">alpha residual</text>
         <text x="255" y="72">slope = beta</text>
+      </svg>
+    `;
+  }
+
+  if (type === "bars") {
+    return `
+      <svg class="concept-visual" viewBox="0 0 520 220" role="img" aria-label="Valuation driver bars">
+        <line class="chart-axis" x1="52" y1="176" x2="474" y2="176" />
+        <rect class="bar mint" x="82" y="112" width="58" height="64" />
+        <rect class="bar blue" x="176" y="82" width="58" height="94" />
+        <rect class="bar rose" x="270" y="58" width="58" height="118" />
+        <rect class="bar amber" x="364" y="38" width="58" height="138" />
+        <text x="72" y="198">Growth</text>
+        <text x="168" y="198">Margin</text>
+        <text x="252" y="198">Multiple</text>
+        <text x="356" y="198">Value</text>
+        <text x="62" y="34">Drivers compound into valuation</text>
+      </svg>
+    `;
+  }
+
+  if (type === "dcf") {
+    return `
+      <svg class="concept-visual" viewBox="0 0 520 220" role="img" aria-label="Discounted cash flow diagram">
+        <line class="chart-axis" x1="52" y1="176" x2="474" y2="176" />
+        <line class="chart-axis" x1="52" y1="176" x2="52" y2="32" />
+        <rect class="bar mint" x="86" y="126" width="44" height="50" />
+        <rect class="bar mint" x="150" y="112" width="44" height="64" />
+        <rect class="bar mint" x="214" y="94" width="44" height="82" />
+        <rect class="bar mint" x="278" y="78" width="44" height="98" />
+        <rect class="bar rose" x="364" y="42" width="62" height="134" />
+        <path class="chart-line blue" d="M108 126 L172 112 L236 94 L300 78 L395 42" />
+        <text x="82" y="200">FCF1</text>
+        <text x="148" y="200">FCF2</text>
+        <text x="212" y="200">FCF3</text>
+        <text x="278" y="200">FCF4</text>
+        <text x="350" y="200">Terminal</text>
+        <text x="70" y="34">discount each future cash flow</text>
+      </svg>
+    `;
+  }
+
+  if (type === "distribution") {
+    return `
+      <svg class="concept-visual" viewBox="0 0 520 220" role="img" aria-label="Risk distribution diagram">
+        <line class="chart-axis" x1="52" y1="176" x2="474" y2="176" />
+        <path class="distribution-fill" d="M60 176 C120 172 145 134 190 92 C235 48 290 48 334 92 C380 136 404 172 464 176 Z" />
+        <path class="chart-line blue" d="M60 176 C120 172 145 134 190 92 C235 48 290 48 334 92 C380 136 404 172 464 176" />
+        <rect class="tail-zone" x="60" y="128" width="72" height="48" />
+        <text x="62" y="118">left tail</text>
+        <text x="355" y="202">returns</text>
+        <text x="190" y="34">Loss distribution</text>
       </svg>
     `;
   }
