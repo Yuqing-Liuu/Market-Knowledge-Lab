@@ -611,7 +611,11 @@ function renderPortfolio() {
     const math = holdingMath(holding);
     const related = holding.kind === "option"
       ? relatedForOption(holding.side)
-      : ["股票为什么会涨跌", "财报与预期差", "仓位管理"];
+      : [
+          { label: "股票为什么会涨跌", topicId: "stock-price" },
+          { label: "财报与预期差", topicId: "earnings" },
+          { label: "仓位管理", topicId: "position-sizing" },
+        ];
     return `
       <article class="holding-card">
         <div class="holding-top">
@@ -633,17 +637,43 @@ function renderPortfolio() {
         ${holding.lastUpdated ? `<p class="holding-detail">Quote ${changeText(holding)} · ${new Date(holding.lastUpdated).toLocaleString()}</p>` : ""}
         ${holding.kind === "option" ? `<p class="holding-detail">Strike ${holding.strike || "-"} · Exp ${holding.expiration || "-"}</p>` : ""}
         ${holding.notes ? `<p class="holding-notes">${escapeHtml(holding.notes)}</p>` : ""}
-        <div class="holding-tags">${related.map((item) => `<span>${item}</span>`).join("")}</div>
+        <div class="holding-tags">${related.map((item) => `<button type="button" data-topic-link="${item.topicId}">${item.label}</button>`).join("")}</div>
       </article>
     `;
   }).join("");
 }
 
 function relatedForOption(side) {
-  if (side === "sellPut") return ["Sell Put", "Assignment", "Theta", "Rollover"];
-  if (side === "sellCall") return ["Sell Call", "Covered Call", "Assignment", "Gamma"];
-  if (side === "buyPut") return ["Buy Put", "Protective Put", "Tail Risk", "Vega"];
-  return ["Buy Call", "Delta", "Vega", "Gamma"];
+  if (side === "sellPut") {
+    return [
+      { label: "Sell Put", topicId: "sell-put" },
+      { label: "Assignment", topicId: "assignment" },
+      { label: "Theta", topicId: "theta" },
+      { label: "Rollover", topicId: "rollover" },
+    ];
+  }
+  if (side === "sellCall") {
+    return [
+      { label: "Sell Call", topicId: "sell-call" },
+      { label: "Covered Call", topicId: "covered-call" },
+      { label: "Assignment", topicId: "assignment" },
+      { label: "Gamma", topicId: "gamma" },
+    ];
+  }
+  if (side === "buyPut") {
+    return [
+      { label: "Buy Put", topicId: "buy-put" },
+      { label: "Protective Put", topicId: "protective-put" },
+      { label: "Tail Risk", topicId: "tail-risk" },
+      { label: "Vega", topicId: "vega" },
+    ];
+  }
+  return [
+    { label: "Buy Call", topicId: "buy-call" },
+    { label: "Delta", topicId: "delta" },
+    { label: "Vega", topicId: "vega" },
+    { label: "Gamma", topicId: "gamma" },
+  ];
 }
 
 function labelForSide(side) {
@@ -816,6 +846,13 @@ els.portfolioForm.addEventListener("submit", (event) => {
 els.portfolioList.addEventListener("click", (event) => {
   const edit = event.target.closest("[data-edit-holding]");
   const del = event.target.closest("[data-delete-holding]");
+  const topicLink = event.target.closest("[data-topic-link]");
+  if (topicLink) {
+    selectTopic(topicLink.dataset.topicLink);
+    setView("map");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
   if (edit) {
     const holding = state.portfolio.find((item) => item.id === edit.dataset.editHolding);
     if (holding) fillHoldingForm(holding);

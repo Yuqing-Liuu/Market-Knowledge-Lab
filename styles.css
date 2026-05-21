@@ -869,13 +869,19 @@ ul {
   margin-top: 10px;
 }
 
-.holding-tags span {
+.holding-tags button {
   border: 1px solid rgba(78, 121, 216, 0.18);
   border-radius: 999px;
   background: var(--surface-blue);
   color: var(--blue);
+  cursor: pointer;
   font-size: 11px;
   padding: 4px 8px;
+}
+
+.holding-tags button:hover {
+  border-color: var(--blue);
+  background: #edf3ff;
 }
 
 .portfolio-form {
