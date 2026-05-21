@@ -103,6 +103,7 @@ const state = {
   search: "",
   sort: "name",
   view: "map",
+  portfolio: [],
 };
 
 const els = {
@@ -119,6 +120,23 @@ const els = {
   viewTabs: document.querySelectorAll(".view-tab"),
   mapView: document.querySelector("#mapView"),
   labView: document.querySelector("#labView"),
+  portfolioView: document.querySelector("#portfolioView"),
+  portfolioWorkspace: document.querySelector("#portfolioWorkspace"),
+  portfolioStats: document.querySelector("#portfolioStats"),
+  portfolioList: document.querySelector("#portfolioList"),
+  portfolioCount: document.querySelector("#portfolioCount"),
+  portfolioForm: document.querySelector("#portfolioForm"),
+  holdingKind: document.querySelector("#holdingKind"),
+  holdingSymbol: document.querySelector("#holdingSymbol"),
+  holdingSide: document.querySelector("#holdingSide"),
+  holdingQty: document.querySelector("#holdingQty"),
+  holdingCost: document.querySelector("#holdingCost"),
+  holdingPrice: document.querySelector("#holdingPrice"),
+  holdingStrike: document.querySelector("#holdingStrike"),
+  holdingExpiration: document.querySelector("#holdingExpiration"),
+  holdingNotes: document.querySelector("#holdingNotes"),
+  exportPortfolioBtn: document.querySelector("#exportPortfolioBtn"),
+  importPortfolioInput: document.querySelector("#importPortfolioInput"),
   strategySelect: document.querySelector("#strategySelect"),
   spotInput: document.querySelector("#spotInput"),
   strikeInput: document.querySelector("#strikeInput"),
@@ -130,9 +148,55 @@ const els = {
 const topicById = Object.fromEntries(TOPICS.map((item) => [item.id, item]));
 const categoryById = Object.fromEntries(CATEGORIES.map((item) => [item.id, item]));
 const difficultyRank = { basic: 1, intermediate: 2, advanced: 3 };
+const PORTFOLIO_KEY = "market-knowledge-portfolio-v1";
+const STARTER_HOLDINGS = [
+  starterStock("MU"),
+  starterStock("INTC"),
+  starterStock("LITE"),
+  starterStock("AAOI"),
+  starterStock("NBIS"),
+  starterOption("NOK"),
+  starterOption("NVDA"),
+];
 
 function topic(id, title, english, category, difficulty, related, summary, mechanics, pitfalls) {
   return { id, title, english, category, difficulty, related, summary, mechanics, pitfalls };
+}
+
+function starterStock(symbol) {
+  return {
+    id: newId(symbol),
+    kind: "stock",
+    symbol,
+    side: "long",
+    qty: "",
+    cost: "",
+    price: "",
+    strike: "",
+    expiration: "",
+    notes: "",
+  };
+}
+
+function starterOption(symbol) {
+  return {
+    id: newId(symbol),
+    kind: "option",
+    symbol,
+    side: "buyCall",
+    qty: "",
+    cost: "",
+    price: "",
+    strike: "",
+    expiration: "",
+    notes: "",
+  };
+}
+
+function newId(prefix = "holding") {
+  return globalThis.crypto?.randomUUID
+    ? crypto.randomUUID()
+    : `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function categoryTopics(categoryId) {
@@ -332,7 +396,9 @@ function setView(view) {
   els.viewTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.view === view));
   els.mapView.classList.toggle("hidden", view !== "map");
   els.labView.classList.toggle("hidden", view !== "lab");
+  els.portfolioView.classList.toggle("hidden", view !== "portfolio");
   if (view === "lab") renderPayoff();
+  if (view === "portfolio") renderPortfolio();
 }
 
 function renderPayoff() {
@@ -410,6 +476,185 @@ function fmt(value) {
   return Number(value).toFixed(2);
 }
 
+function money(value) {
+  const number = Number(value) || 0;
+  return number.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+}
+
+function loadPortfolio() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PORTFOLIO_KEY) || "null");
+    state.portfolio = Array.isArray(saved?.holdings) && saved.holdings.length ? saved.holdings : STARTER_HOLDINGS;
+  } catch {
+    state.portfolio = STARTER_HOLDINGS;
+  }
+}
+
+function savePortfolio() {
+  localStorage.setItem(
+    PORTFOLIO_KEY,
+    JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), holdings: state.portfolio }),
+  );
+}
+
+function holdingMath(holding) {
+  const qty = Number(holding.qty) || 0;
+  const cost = Number(holding.cost) || 0;
+  const price = Number(holding.price) || 0;
+  const multiplier = holding.kind === "option" ? 100 : 1;
+  const direction = holding.kind === "option" && holding.side.startsWith("sell") ? -1 : 1;
+  const costBasis = qty * cost * multiplier;
+  const marketValue = qty * price * multiplier * direction;
+  const pnl = holding.kind === "option" && holding.side.startsWith("sell")
+    ? qty * (cost - price) * multiplier
+    : qty * (price - cost) * multiplier;
+  return { qty, cost, price, multiplier, costBasis, marketValue, pnl };
+}
+
+function renderPortfolio() {
+  if (!state.portfolio.length) {
+    state.portfolio = STARTER_HOLDINGS;
+    savePortfolio();
+  }
+
+  const rows = state.portfolio.map((holding) => ({ holding, math: holdingMath(holding) }));
+  const totalValue = rows.reduce((sum, row) => sum + row.math.marketValue, 0);
+  const totalCost = rows.reduce((sum, row) => sum + row.math.costBasis, 0);
+  const totalPnl = rows.reduce((sum, row) => sum + row.math.pnl, 0);
+  const priced = rows.filter((row) => row.math.qty && row.math.price);
+
+  els.portfolioStats.innerHTML = [
+    ["Market Value", money(totalValue)],
+    ["Cost / Premium Basis", money(totalCost)],
+    ["Unrealized P/L", money(totalPnl)],
+    ["Tracked Names", String(state.portfolio.length)],
+  ].map(([label, value]) => `
+    <div class="portfolio-stat">
+      <span>${label}</span>
+      <strong class="${label.includes("P/L") ? (totalPnl >= 0 ? "positive" : "negative") : ""}">${value}</strong>
+    </div>
+  `).join("");
+
+  els.portfolioCount.textContent = `${priced.length} priced`;
+  els.portfolioList.innerHTML = state.portfolio.map((holding) => {
+    const math = holdingMath(holding);
+    const related = holding.kind === "option"
+      ? relatedForOption(holding.side)
+      : ["股票为什么会涨跌", "财报与预期差", "仓位管理"];
+    return `
+      <article class="holding-card">
+        <div class="holding-top">
+          <div>
+            <strong>${escapeHtml(holding.symbol || "NEW")}</strong>
+            <span>${holding.kind === "option" ? labelForSide(holding.side) : "Long Stock"}</span>
+          </div>
+          <div class="holding-actions">
+            <button type="button" data-edit-holding="${holding.id}">Edit</button>
+            <button type="button" data-delete-holding="${holding.id}">Delete</button>
+          </div>
+        </div>
+        <div class="holding-metrics">
+          <span>Qty <strong>${holding.qty || "-"}</strong></span>
+          <span>Cost <strong>${holding.cost ? money(holding.cost) : "-"}</strong></span>
+          <span>Price <strong>${holding.price ? money(holding.price) : "-"}</strong></span>
+          <span>P/L <strong class="${math.pnl >= 0 ? "positive" : "negative"}">${holding.qty && holding.cost && holding.price ? money(math.pnl) : "-"}</strong></span>
+        </div>
+        ${holding.kind === "option" ? `<p class="holding-detail">Strike ${holding.strike || "-"} · Exp ${holding.expiration || "-"}</p>` : ""}
+        ${holding.notes ? `<p class="holding-notes">${escapeHtml(holding.notes)}</p>` : ""}
+        <div class="holding-tags">${related.map((item) => `<span>${item}</span>`).join("")}</div>
+      </article>
+    `;
+  }).join("");
+}
+
+function relatedForOption(side) {
+  if (side === "sellPut") return ["Sell Put", "Assignment", "Theta", "Rollover"];
+  if (side === "sellCall") return ["Sell Call", "Covered Call", "Assignment", "Gamma"];
+  if (side === "buyPut") return ["Buy Put", "Protective Put", "Tail Risk", "Vega"];
+  return ["Buy Call", "Delta", "Vega", "Gamma"];
+}
+
+function labelForSide(side) {
+  return {
+    long: "Long Stock",
+    buyCall: "Buy Call",
+    buyPut: "Buy Put",
+    sellPut: "Sell Put",
+    sellCall: "Sell Call",
+  }[side] || side;
+}
+
+function formHolding() {
+  const existing = els.portfolioForm.dataset.editing;
+  return {
+    id: existing || newId(els.holdingSymbol.value || "holding"),
+    kind: els.holdingKind.value,
+    symbol: els.holdingSymbol.value.trim().toUpperCase(),
+    side: els.holdingSide.value,
+    qty: els.holdingQty.value,
+    cost: els.holdingCost.value,
+    price: els.holdingPrice.value,
+    strike: els.holdingStrike.value,
+    expiration: els.holdingExpiration.value,
+    notes: els.holdingNotes.value.trim(),
+  };
+}
+
+function fillHoldingForm(holding) {
+  els.portfolioForm.dataset.editing = holding.id;
+  els.holdingKind.value = holding.kind || "stock";
+  els.holdingSymbol.value = holding.symbol || "";
+  els.holdingSide.value = holding.side || "long";
+  els.holdingQty.value = holding.qty || "";
+  els.holdingCost.value = holding.cost || "";
+  els.holdingPrice.value = holding.price || "";
+  els.holdingStrike.value = holding.strike || "";
+  els.holdingExpiration.value = holding.expiration || "";
+  els.holdingNotes.value = holding.notes || "";
+}
+
+function clearHoldingForm() {
+  els.portfolioForm.reset();
+  delete els.portfolioForm.dataset.editing;
+  els.holdingSide.value = "long";
+}
+
+function exportPortfolio() {
+  const blob = new Blob([JSON.stringify({ version: 1, holdings: state.portfolio }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `market-portfolio-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function importPortfolio(file) {
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const parsed = JSON.parse(String(reader.result));
+      if (!Array.isArray(parsed.holdings)) throw new Error("Missing holdings");
+      state.portfolio = parsed.holdings;
+      savePortfolio();
+      renderPortfolio();
+    } catch {
+      window.alert("Import failed. Please choose a portfolio JSON export.");
+    }
+  });
+  reader.readAsText(file);
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  }[char]));
+}
+
 els.categoryNav.addEventListener("click", (event) => {
   const button = event.target.closest("[data-category]");
   if (button) selectCategory(button.dataset.category);
@@ -464,5 +709,47 @@ els.focusBtn.addEventListener("click", () => {
   input.addEventListener("input", renderPayoff);
 });
 
+els.portfolioForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const holding = formHolding();
+  if (!holding.symbol) {
+    window.alert("Please enter a ticker symbol.");
+    return;
+  }
+  const index = state.portfolio.findIndex((item) => item.id === holding.id);
+  if (index >= 0) {
+    state.portfolio[index] = holding;
+  } else {
+    state.portfolio.push(holding);
+  }
+  savePortfolio();
+  clearHoldingForm();
+  renderPortfolio();
+});
+
+els.portfolioList.addEventListener("click", (event) => {
+  const edit = event.target.closest("[data-edit-holding]");
+  const del = event.target.closest("[data-delete-holding]");
+  if (edit) {
+    const holding = state.portfolio.find((item) => item.id === edit.dataset.editHolding);
+    if (holding) fillHoldingForm(holding);
+  }
+  if (del) {
+    state.portfolio = state.portfolio.filter((item) => item.id !== del.dataset.deleteHolding);
+    savePortfolio();
+    renderPortfolio();
+  }
+});
+
+els.exportPortfolioBtn.addEventListener("click", exportPortfolio);
+
+els.importPortfolioInput.addEventListener("change", (event) => {
+  const [file] = event.target.files;
+  if (file) importPortfolio(file);
+  event.target.value = "";
+});
+
+loadPortfolio();
 render();
 renderPayoff();
+renderPortfolio();
