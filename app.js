@@ -184,6 +184,7 @@ const els = {
   newsCount: document.querySelector("#newsCount"),
   loadDefaultNewsBtn: document.querySelector("#loadDefaultNewsBtn"),
   refreshNewsBtn: document.querySelector("#refreshNewsBtn"),
+  translateNewsBtn: document.querySelector("#translateNewsBtn"),
   strategySelect: document.querySelector("#strategySelect"),
   spotInput: document.querySelector("#spotInput"),
   strikeInput: document.querySelector("#strikeInput"),
@@ -198,6 +199,7 @@ const difficultyRank = { basic: 1, intermediate: 2, advanced: 3 };
 const PORTFOLIO_KEY = "market-knowledge-portfolio-v1";
 const FOCUS_KEY = "market-knowledge-focus-v1";
 const CALENDAR_KEY = "market-knowledge-calendar-v1";
+const NEWS_TRANSLATION_KEY = "market-knowledge-news-title-translations-v1";
 const FINNHUB_KEY = "market-knowledge-finnhub-key";
 const STARTER_HOLDINGS = [
   starterStock("MU"),
@@ -1061,12 +1063,67 @@ function setDefaultNewsTickers() {
   els.newsTickers.value = myTickerUniverse().join(", ");
 }
 
+function loadTranslationCache() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(NEWS_TRANSLATION_KEY) || "{}");
+    return saved && typeof saved === "object" ? saved : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveTranslationCache(cache) {
+  localStorage.setItem(NEWS_TRANSLATION_KEY, JSON.stringify(cache));
+}
+
 async function fetchCompanyNews(symbol, key, from, to) {
   const url = `https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(symbol)}&from=${from}&to=${to}&token=${encodeURIComponent(key)}`;
   const response = await fetch(url);
   if (!response.ok) throw new Error(`News failed for ${symbol}`);
   const data = await response.json();
   return Array.isArray(data) ? data.map((item) => ({ ...item, querySymbol: symbol })) : [];
+}
+
+async function translateTitleToChinese(title) {
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(title)}&langpair=en|zh-CN`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Translation request failed");
+  const data = await response.json();
+  return data?.responseData?.translatedText || "";
+}
+
+async function translateNewsTitles() {
+  const visible = state.news.filter((item) => item.headline).slice(0, 40);
+  if (!visible.length) {
+    window.alert("Fetch news first, then translate titles.");
+    return;
+  }
+
+  const cache = loadTranslationCache();
+  els.translateNewsBtn.disabled = true;
+  els.translateNewsBtn.textContent = "Translating...";
+
+  try {
+    for (const item of visible) {
+      const headline = item.headline.trim();
+      if (!headline || cache[headline]) continue;
+      const translated = await translateTitleToChinese(headline);
+      if (translated && translated.toLowerCase() !== headline.toLowerCase()) {
+        cache[headline] = translated;
+      }
+    }
+    saveTranslationCache(cache);
+    state.news = state.news.map((item) => ({
+      ...item,
+      translatedHeadline: item.headline ? cache[item.headline.trim()] || item.translatedHeadline || "" : "",
+    }));
+    renderNews();
+  } catch (error) {
+    window.alert(`Translation failed: ${error.message}`);
+  } finally {
+    els.translateNewsBtn.disabled = false;
+    els.translateNewsBtn.textContent = "Translate Titles";
+  }
 }
 
 async function refreshNews() {
@@ -1096,8 +1153,13 @@ async function refreshNews() {
 
   try {
     const batches = await Promise.all(symbols.map((symbol) => fetchCompanyNews(symbol, key, from, to)));
+    const cache = loadTranslationCache();
     state.news = batches.flat()
       .filter((item) => item.headline || item.summary)
+      .map((item) => ({
+        ...item,
+        translatedHeadline: item.headline ? cache[item.headline.trim()] || "" : "",
+      }))
       .sort((a, b) => Number(b.datetime || 0) - Number(a.datetime || 0))
       .slice(0, 120);
     renderNews();
@@ -1462,7 +1524,10 @@ function renderNews() {
         <span>${escapeHtml(item.querySymbol || item.related || "NEWS")}</span>
         <small>${item.datetime ? new Date(item.datetime * 1000).toLocaleString() : ""}</small>
       </div>
-      <h4>${escapeHtml(item.headline || "Untitled news")}</h4>
+      <h4>
+        <span class="news-title-en">${escapeHtml(item.headline || "Untitled news")}</span>
+        ${item.translatedHeadline ? `<span class="news-title-zh">${escapeHtml(item.translatedHeadline)}</span>` : ""}
+      </h4>
       ${item.summary ? `<p>${escapeHtml(item.summary)}</p>` : ""}
       <div class="news-meta">
         <span>${escapeHtml(item.source || "Unknown source")}</span>
@@ -1933,6 +1998,7 @@ els.loadDefaultNewsBtn.addEventListener("click", () => {
 });
 
 els.refreshNewsBtn.addEventListener("click", refreshNews);
+els.translateNewsBtn.addEventListener("click", translateNewsTitles);
 els.newsFilter.addEventListener("input", renderNews);
 els.newsLookback.addEventListener("change", renderNews);
 els.newsTickers.addEventListener("input", renderNews);

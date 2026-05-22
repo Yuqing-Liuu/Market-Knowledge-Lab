@@ -1076,6 +1076,18 @@ ul {
   margin: 10px 0 8px;
 }
 
+.news-title-en,
+.news-title-zh {
+  display: block;
+}
+
+.news-title-zh {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
 .news-card p {
   color: var(--muted);
   line-height: 1.55;
