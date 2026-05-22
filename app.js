@@ -105,6 +105,7 @@ const state = {
   view: "map",
   portfolio: [],
   focusList: [],
+  calendar: [],
 };
 
 const els = {
@@ -123,6 +124,7 @@ const els = {
   labView: document.querySelector("#labView"),
   portfolioView: document.querySelector("#portfolioView"),
   focusView: document.querySelector("#focusView"),
+  calendarView: document.querySelector("#calendarView"),
   portfolioWorkspace: document.querySelector("#portfolioWorkspace"),
   portfolioStats: document.querySelector("#portfolioStats"),
   portfolioList: document.querySelector("#portfolioList"),
@@ -157,6 +159,21 @@ const els = {
   refreshFocusBtn: document.querySelector("#refreshFocusBtn"),
   exportFocusBtn: document.querySelector("#exportFocusBtn"),
   importFocusInput: document.querySelector("#importFocusInput"),
+  calendarStats: document.querySelector("#calendarStats"),
+  calendarList: document.querySelector("#calendarList"),
+  calendarCount: document.querySelector("#calendarCount"),
+  calendarForm: document.querySelector("#calendarForm"),
+  eventDate: document.querySelector("#eventDate"),
+  eventTitle: document.querySelector("#eventTitle"),
+  eventType: document.querySelector("#eventType"),
+  eventImportance: document.querySelector("#eventImportance"),
+  eventStatus: document.querySelector("#eventStatus"),
+  eventTicker: document.querySelector("#eventTicker"),
+  eventImpact: document.querySelector("#eventImpact"),
+  eventSource: document.querySelector("#eventSource"),
+  eventAction: document.querySelector("#eventAction"),
+  exportCalendarBtn: document.querySelector("#exportCalendarBtn"),
+  importCalendarInput: document.querySelector("#importCalendarInput"),
   strategySelect: document.querySelector("#strategySelect"),
   spotInput: document.querySelector("#spotInput"),
   strikeInput: document.querySelector("#strikeInput"),
@@ -170,6 +187,7 @@ const categoryById = Object.fromEntries(CATEGORIES.map((item) => [item.id, item]
 const difficultyRank = { basic: 1, intermediate: 2, advanced: 3 };
 const PORTFOLIO_KEY = "market-knowledge-portfolio-v1";
 const FOCUS_KEY = "market-knowledge-focus-v1";
+const CALENDAR_KEY = "market-knowledge-calendar-v1";
 const FINNHUB_KEY = "market-knowledge-finnhub-key";
 const STARTER_HOLDINGS = [
   starterStock("MU"),
@@ -188,6 +206,12 @@ const STARTER_FOCUS = [
   focusName("NVDA", "high", "watching", "AI accelerator demand and platform ecosystem; watch data center growth and margin sustainability."),
   focusName("NBIS", "medium", "active", "AI infrastructure story; watch financing needs, utilization, and customer concentration."),
   focusName("AAOI", "medium", "waiting", "Optical networking beta; watch datacenter orders, margin trend, and dilution risk."),
+];
+
+const STARTER_EVENTS = [
+  calendarEvent("SpaceX", "watching", "funding", "high", "", "Private market valuation, Starship milestones, Starlink growth, and possible IPO path can influence space, satellite, defense, and private-market sentiment.", "Track Starship launch cadence, Starlink revenue hints, and any formal listing comments."),
+  calendarEvent("OpenAI", "watching", "funding", "high", "", "Funding rounds, model releases, and infrastructure spending can affect AI supply chain names, cloud capex expectations, and software competition.", "Watch model launch cadence, enterprise traction, compute partners, and valuation signals."),
+  calendarEvent("Claude / Anthropic listing", "rumor", "ipo", "high", "", "A future Anthropic listing would be an AI benchmark event. It could reset valuation comps for foundation model companies and related cloud/semiconductor names.", "Treat as unconfirmed; collect credible sources and compare against OpenAI/private AI valuation multiples."),
 ];
 
 const ENRICHED_TOPICS = {
@@ -408,6 +432,21 @@ function focusName(symbol, priority = "medium", status = "watching", thesis = ""
     catalyst: "",
     risk: "",
     action: "",
+  };
+}
+
+function calendarEvent(title, status = "watching", type = "other", importance = "medium", date = "", impact = "", action = "") {
+  return {
+    id: newId("event"),
+    date,
+    title,
+    type,
+    importance,
+    status,
+    ticker: "",
+    impact,
+    source: "",
+    action,
   };
 }
 
@@ -818,9 +857,11 @@ function setView(view) {
   els.labView.classList.toggle("hidden", view !== "lab");
   els.portfolioView.classList.toggle("hidden", view !== "portfolio");
   els.focusView.classList.toggle("hidden", view !== "focus");
+  els.calendarView.classList.toggle("hidden", view !== "calendar");
   if (view === "lab") renderPayoff();
   if (view === "portfolio") renderPortfolio();
   if (view === "focus") renderFocus();
+  if (view === "calendar") renderCalendar();
 }
 
 function renderPayoff() {
@@ -946,6 +987,23 @@ function saveFocus() {
   localStorage.setItem(
     FOCUS_KEY,
     JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), items: state.focusList }),
+  );
+}
+
+function loadCalendar() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CALENDAR_KEY) || "null");
+    state.calendar = Array.isArray(saved?.events) && saved.events.length ? saved.events : STARTER_EVENTS;
+  } catch {
+    state.calendar = STARTER_EVENTS;
+  }
+  saveCalendar();
+}
+
+function saveCalendar() {
+  localStorage.setItem(
+    CALENDAR_KEY,
+    JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), events: state.calendar }),
   );
 }
 
@@ -1192,6 +1250,105 @@ function labelForFocusStatus(status) {
   }[status] || "Watching";
 }
 
+function renderCalendar() {
+  if (!state.calendar.length) {
+    state.calendar = STARTER_EVENTS;
+    saveCalendar();
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const sorted = [...state.calendar].sort((a, b) => eventSortValue(a) - eventSortValue(b));
+  const dated = sorted.filter((event) => event.date);
+  const upcoming = dated.filter((event) => new Date(`${event.date}T00:00:00`) >= today).length;
+  const high = sorted.filter((event) => event.importance === "high").length;
+  const rumors = sorted.filter((event) => event.status === "rumor").length;
+
+  els.calendarStats.innerHTML = [
+    ["Events", String(sorted.length)],
+    ["Upcoming", String(upcoming)],
+    ["High Importance", String(high)],
+    ["Rumor / Unconfirmed", String(rumors)],
+  ].map(([label, value]) => `
+    <div class="portfolio-stat">
+      <span>${label}</span>
+      <strong>${value}</strong>
+    </div>
+  `).join("");
+
+  els.calendarCount.textContent = dated.length ? `${dated.length} dated` : `${sorted.length} tracked`;
+  els.calendarList.innerHTML = sorted.map((event) => {
+    const related = [
+      { label: "Stock reaction", topicId: "stock-price" },
+      { label: "Expectations", topicId: "earnings" },
+      { label: "Valuation", topicId: "valuation" },
+      { label: "Risk premium", topicId: "risk-premium" },
+    ];
+    return `
+      <article class="calendar-card importance-${escapeHtml(event.importance || "medium")}">
+        <div class="calendar-date">
+          <span>${event.date ? formatEventDay(event.date) : "TBD"}</span>
+          <strong>${event.date ? formatEventMonth(event.date) : "No date"}</strong>
+        </div>
+        <div class="calendar-body">
+          <div class="holding-top">
+            <div>
+              <strong>${escapeHtml(event.title || "Untitled event")}</strong>
+              <span>${labelForEventType(event.type)} · ${labelForEventStatus(event.status)} · ${labelForPriority(event.importance)}</span>
+            </div>
+            <div class="holding-actions">
+              <button type="button" data-edit-event="${event.id}">Edit</button>
+              <button type="button" data-delete-event="${event.id}">Delete</button>
+            </div>
+          </div>
+          ${event.ticker ? `<p class="focus-note"><span>Related ticker</span>${escapeHtml(event.ticker)}</p>` : ""}
+          ${focusSection("Why it matters", event.impact)}
+          ${event.source ? `<p class="focus-note"><span>Source</span><a href="${escapeHtml(event.source)}" target="_blank" rel="noreferrer">${escapeHtml(event.source)}</a></p>` : ""}
+          ${focusSection("Next Action", event.action)}
+          <div class="holding-tags">${related.map((topic) => `<button type="button" data-topic-link="${topic.topicId}">${topic.label}</button>`).join("")}</div>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+function eventSortValue(event) {
+  if (!event.date) return Number.MAX_SAFE_INTEGER;
+  return new Date(`${event.date}T00:00:00`).getTime();
+}
+
+function formatEventDay(date) {
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return "TBD";
+  return String(parsed.getDate()).padStart(2, "0");
+}
+
+function formatEventMonth(date) {
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return "No date";
+  return parsed.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+}
+
+function labelForEventType(type) {
+  return {
+    ipo: "IPO / listing",
+    product: "Product launch",
+    earnings: "Earnings",
+    macro: "Macro / policy",
+    funding: "Funding / valuation",
+    other: "Other",
+  }[type] || "Other";
+}
+
+function labelForEventStatus(status) {
+  return {
+    rumor: "Rumor / unconfirmed",
+    watching: "Watching",
+    confirmed: "Confirmed",
+    done: "Done",
+  }[status] || "Watching";
+}
+
 function relatedForOption(side) {
   if (side === "sellPut") {
     return [
@@ -1318,6 +1475,43 @@ function clearFocusForm() {
   els.focusStatus.value = "watching";
 }
 
+function formCalendarEvent() {
+  const existing = els.calendarForm.dataset.editing;
+  return {
+    id: existing || newId("event"),
+    date: els.eventDate.value,
+    title: els.eventTitle.value.trim(),
+    type: els.eventType.value,
+    importance: els.eventImportance.value,
+    status: els.eventStatus.value,
+    ticker: els.eventTicker.value.trim().toUpperCase(),
+    impact: els.eventImpact.value.trim(),
+    source: els.eventSource.value.trim(),
+    action: els.eventAction.value.trim(),
+  };
+}
+
+function fillCalendarForm(event) {
+  els.calendarForm.dataset.editing = event.id;
+  els.eventDate.value = event.date || "";
+  els.eventTitle.value = event.title || "";
+  els.eventType.value = event.type || "other";
+  els.eventImportance.value = event.importance || "medium";
+  els.eventStatus.value = event.status || "watching";
+  els.eventTicker.value = event.ticker || "";
+  els.eventImpact.value = event.impact || "";
+  els.eventSource.value = event.source || "";
+  els.eventAction.value = event.action || "";
+}
+
+function clearCalendarForm() {
+  els.calendarForm.reset();
+  delete els.calendarForm.dataset.editing;
+  els.eventType.value = "ipo";
+  els.eventImportance.value = "high";
+  els.eventStatus.value = "rumor";
+}
+
 function exportPortfolio() {
   const blob = new Blob([JSON.stringify({ version: 1, holdings: state.portfolio }, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -1334,6 +1528,16 @@ function exportFocus() {
   const link = document.createElement("a");
   link.href = url;
   link.download = `market-focus-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportCalendar() {
+  const blob = new Blob([JSON.stringify({ version: 1, events: state.calendar }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `market-calendar-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -1365,6 +1569,22 @@ function importFocus(file) {
       renderFocus();
     } catch {
       window.alert("Import failed. Please choose a focus JSON export.");
+    }
+  });
+  reader.readAsText(file);
+}
+
+function importCalendar(file) {
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const parsed = JSON.parse(String(reader.result));
+      if (!Array.isArray(parsed.events)) throw new Error("Missing calendar events");
+      state.calendar = parsed.events;
+      saveCalendar();
+      renderCalendar();
+    } catch {
+      window.alert("Import failed. Please choose a calendar JSON export.");
     }
   });
   reader.readAsText(file);
@@ -1532,9 +1752,58 @@ els.importFocusInput.addEventListener("change", (event) => {
   event.target.value = "";
 });
 
+els.calendarForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const item = formCalendarEvent();
+  if (!item.title) {
+    window.alert("Please enter a topic or company.");
+    return;
+  }
+  const index = state.calendar.findIndex((eventItem) => eventItem.id === item.id);
+  if (index >= 0) {
+    state.calendar[index] = item;
+  } else {
+    state.calendar.push(item);
+  }
+  saveCalendar();
+  clearCalendarForm();
+  renderCalendar();
+});
+
+els.calendarList.addEventListener("click", (event) => {
+  const edit = event.target.closest("[data-edit-event]");
+  const del = event.target.closest("[data-delete-event]");
+  const topicLink = event.target.closest("[data-topic-link]");
+  if (topicLink) {
+    selectTopic(topicLink.dataset.topicLink);
+    setView("map");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+  if (edit) {
+    const item = state.calendar.find((eventItem) => eventItem.id === edit.dataset.editEvent);
+    if (item) fillCalendarForm(item);
+  }
+  if (del) {
+    state.calendar = state.calendar.filter((eventItem) => eventItem.id !== del.dataset.deleteEvent);
+    saveCalendar();
+    renderCalendar();
+  }
+});
+
+els.exportCalendarBtn.addEventListener("click", exportCalendar);
+
+els.importCalendarInput.addEventListener("change", (event) => {
+  const [file] = event.target.files;
+  if (file) importCalendar(file);
+  event.target.value = "";
+});
+
 loadPortfolio();
 loadFocus();
+loadCalendar();
 render();
 renderPayoff();
 renderPortfolio();
 renderFocus();
+renderCalendar();

@@ -923,6 +923,12 @@ ul {
   padding: 12px;
 }
 
+.calendar-list {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
 .holding-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -950,6 +956,59 @@ ul {
 .focus-card.priority-low {
   border-color: rgba(83, 194, 142, 0.38);
   box-shadow: inset 4px 0 0 rgba(83, 194, 142, 0.72);
+}
+
+.calendar-card {
+  align-items: stretch;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(253, 249, 252, 0.95));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 92px minmax(0, 1fr);
+  padding: 12px;
+}
+
+.calendar-card.importance-high {
+  border-color: rgba(216, 111, 145, 0.38);
+}
+
+.calendar-card.importance-medium {
+  border-color: rgba(242, 185, 84, 0.42);
+}
+
+.calendar-card.importance-low {
+  border-color: rgba(83, 194, 142, 0.38);
+}
+
+.calendar-date {
+  align-content: center;
+  background: linear-gradient(180deg, #fff7fa, #edf3ff);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  justify-items: center;
+  min-height: 92px;
+  padding: 10px;
+  text-align: center;
+}
+
+.calendar-date span {
+  color: var(--rose);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.calendar-date strong {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 6px;
+  text-transform: uppercase;
+}
+
+.calendar-body {
+  min-width: 0;
 }
 
 .holding-top {
@@ -1213,6 +1272,7 @@ ul {
 
   .holding-metrics,
   .focus-meta,
+  .calendar-card,
   .portfolio-form {
     grid-template-columns: 1fr;
   }

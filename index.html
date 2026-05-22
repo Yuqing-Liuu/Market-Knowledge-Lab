@@ -46,6 +46,7 @@
             <button class="view-tab" data-view="lab" type="button">Strategy Lab</button>
             <button class="view-tab" data-view="portfolio" type="button">Portfolio</button>
             <button class="view-tab" data-view="focus" type="button">Focus</button>
+            <button class="view-tab" data-view="calendar" type="button">Calendar</button>
           </div>
         </header>
 
@@ -306,6 +307,97 @@
                     <textarea id="focusAction" rows="2" placeholder="Wait for pullback, read 10-Q, compare peers..."></textarea>
                   </label>
                   <button class="primary-btn" type="submit">Save Focus Name</button>
+                </form>
+              </article>
+            </div>
+          </section>
+        </section>
+
+        <section id="calendarView" class="view-panel hidden">
+          <section class="portfolio-workspace">
+            <div class="portfolio-header">
+              <div>
+                <p class="eyebrow">Catalyst Calendar</p>
+                <h3>News & Event Calendar</h3>
+              </div>
+              <div class="portfolio-actions">
+                <button id="exportCalendarBtn" class="mini-btn" type="button">Export</button>
+                <label class="mini-btn import-btn">
+                  Import
+                  <input id="importCalendarInput" type="file" accept="application/json" />
+                </label>
+              </div>
+            </div>
+
+            <div id="calendarStats" class="portfolio-stats"></div>
+
+            <div class="portfolio-grid calendar-grid">
+              <article class="portfolio-panel">
+                <div class="pane-head">
+                  <span>Important events</span>
+                  <span id="calendarCount"></span>
+                </div>
+                <div id="calendarList" class="calendar-list"></div>
+              </article>
+
+              <article class="portfolio-panel">
+                <div class="pane-head">
+                  <span>Add / Update</span>
+                </div>
+                <form id="calendarForm" class="portfolio-form">
+                  <label>
+                    <span>Date</span>
+                    <input id="eventDate" type="date" />
+                  </label>
+                  <label>
+                    <span>Topic / Company</span>
+                    <input id="eventTitle" type="text" placeholder="OpenAI / SpaceX / Claude" />
+                  </label>
+                  <label>
+                    <span>Type</span>
+                    <select id="eventType">
+                      <option value="ipo">IPO / listing</option>
+                      <option value="product">Product launch</option>
+                      <option value="earnings">Earnings</option>
+                      <option value="macro">Macro / policy</option>
+                      <option value="funding">Funding / valuation</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Importance</span>
+                    <select id="eventImportance">
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Status</span>
+                    <select id="eventStatus">
+                      <option value="rumor">Rumor / unconfirmed</option>
+                      <option value="watching">Watching</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="done">Done</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Related ticker</span>
+                    <input id="eventTicker" type="text" placeholder="optional: NVDA / MSFT / TSM" />
+                  </label>
+                  <label class="wide">
+                    <span>Why it matters</span>
+                    <textarea id="eventImpact" rows="3" placeholder="Market impact, related names, expected direction..."></textarea>
+                  </label>
+                  <label class="wide">
+                    <span>Source / Link</span>
+                    <input id="eventSource" type="url" placeholder="https://..." />
+                  </label>
+                  <label class="wide">
+                    <span>Next Action</span>
+                    <textarea id="eventAction" rows="2" placeholder="Read S-1, check valuation, compare peers, wait for date..."></textarea>
+                  </label>
+                  <button class="primary-btn" type="submit">Save Event</button>
                 </form>
               </article>
             </div>
