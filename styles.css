@@ -917,11 +917,39 @@ ul {
   padding: 12px;
 }
 
+.focus-list {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
 .holding-card {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: linear-gradient(180deg, #fff 0%, #fbf6f8 100%);
   padding: 12px;
+}
+
+.focus-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(245, 250, 255, 0.94));
+  padding: 14px;
+}
+
+.focus-card.priority-high {
+  border-color: rgba(216, 111, 145, 0.38);
+  box-shadow: inset 4px 0 0 rgba(216, 111, 145, 0.7);
+}
+
+.focus-card.priority-medium {
+  border-color: rgba(242, 185, 84, 0.42);
+  box-shadow: inset 4px 0 0 rgba(242, 185, 84, 0.72);
+}
+
+.focus-card.priority-low {
+  border-color: rgba(83, 194, 142, 0.38);
+  box-shadow: inset 4px 0 0 rgba(83, 194, 142, 0.72);
 }
 
 .holding-top {
@@ -970,7 +998,23 @@ ul {
   margin: 12px 0;
 }
 
+.focus-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
 .holding-metrics span {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--muted);
+  font-size: 12px;
+  padding: 8px;
+}
+
+.focus-meta span {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.75);
@@ -985,17 +1029,44 @@ ul {
   color: var(--text);
 }
 
+.focus-meta strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--text);
+}
+
 .holding-metrics strong.positive {
   color: var(--green);
 }
 
-.holding-metrics strong.negative {
+.holding-metrics strong.negative,
+.focus-meta strong.negative {
   color: var(--red);
+}
+
+.focus-meta strong.positive {
+  color: var(--green);
 }
 
 .holding-detail,
 .holding-notes {
   margin: 8px 0 0;
+}
+
+.focus-note {
+  color: var(--text);
+  line-height: 1.55;
+  margin: 10px 0 0;
+}
+
+.focus-note span {
+  color: var(--rose);
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  margin-bottom: 2px;
+  text-transform: uppercase;
 }
 
 .holding-tags {
@@ -1141,6 +1212,7 @@ ul {
   }
 
   .holding-metrics,
+  .focus-meta,
   .portfolio-form {
     grid-template-columns: 1fr;
   }

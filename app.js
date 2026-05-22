@@ -104,6 +104,7 @@ const state = {
   sort: "name",
   view: "map",
   portfolio: [],
+  focusList: [],
 };
 
 const els = {
@@ -121,6 +122,7 @@ const els = {
   mapView: document.querySelector("#mapView"),
   labView: document.querySelector("#labView"),
   portfolioView: document.querySelector("#portfolioView"),
+  focusView: document.querySelector("#focusView"),
   portfolioWorkspace: document.querySelector("#portfolioWorkspace"),
   portfolioStats: document.querySelector("#portfolioStats"),
   portfolioList: document.querySelector("#portfolioList"),
@@ -140,6 +142,21 @@ const els = {
   refreshPricesBtn: document.querySelector("#refreshPricesBtn"),
   exportPortfolioBtn: document.querySelector("#exportPortfolioBtn"),
   importPortfolioInput: document.querySelector("#importPortfolioInput"),
+  focusStats: document.querySelector("#focusStats"),
+  focusList: document.querySelector("#focusList"),
+  focusCount: document.querySelector("#focusCount"),
+  focusForm: document.querySelector("#focusForm"),
+  focusSymbol: document.querySelector("#focusSymbol"),
+  focusPriority: document.querySelector("#focusPriority"),
+  focusStatus: document.querySelector("#focusStatus"),
+  focusPrice: document.querySelector("#focusPrice"),
+  focusThesis: document.querySelector("#focusThesis"),
+  focusCatalyst: document.querySelector("#focusCatalyst"),
+  focusRisk: document.querySelector("#focusRisk"),
+  focusAction: document.querySelector("#focusAction"),
+  refreshFocusBtn: document.querySelector("#refreshFocusBtn"),
+  exportFocusBtn: document.querySelector("#exportFocusBtn"),
+  importFocusInput: document.querySelector("#importFocusInput"),
   strategySelect: document.querySelector("#strategySelect"),
   spotInput: document.querySelector("#spotInput"),
   strikeInput: document.querySelector("#strikeInput"),
@@ -152,6 +169,7 @@ const topicById = Object.fromEntries(TOPICS.map((item) => [item.id, item]));
 const categoryById = Object.fromEntries(CATEGORIES.map((item) => [item.id, item]));
 const difficultyRank = { basic: 1, intermediate: 2, advanced: 3 };
 const PORTFOLIO_KEY = "market-knowledge-portfolio-v1";
+const FOCUS_KEY = "market-knowledge-focus-v1";
 const FINNHUB_KEY = "market-knowledge-finnhub-key";
 const STARTER_HOLDINGS = [
   starterStock("MU"),
@@ -162,6 +180,14 @@ const STARTER_HOLDINGS = [
   starterStock("TSM"),
   starterOption("NOK"),
   starterOption("NVDA"),
+];
+
+const STARTER_FOCUS = [
+  focusName("MU", "high", "active", "Memory cycle and AI server demand; watch DRAM/NAND pricing and capex discipline."),
+  focusName("TSM", "high", "watching", "AI semiconductor foundry leader; watch monthly revenue, gross margin, and capex guidance."),
+  focusName("NVDA", "high", "watching", "AI accelerator demand and platform ecosystem; watch data center growth and margin sustainability."),
+  focusName("NBIS", "medium", "active", "AI infrastructure story; watch financing needs, utilization, and customer concentration."),
+  focusName("AAOI", "medium", "waiting", "Optical networking beta; watch datacenter orders, margin trend, and dilution risk."),
 ];
 
 const ENRICHED_TOPICS = {
@@ -368,6 +394,20 @@ function starterOption(symbol) {
     strike: "",
     expiration: "",
     notes: "",
+  };
+}
+
+function focusName(symbol, priority = "medium", status = "watching", thesis = "") {
+  return {
+    id: newId(symbol),
+    symbol,
+    priority,
+    status,
+    price: "",
+    thesis,
+    catalyst: "",
+    risk: "",
+    action: "",
   };
 }
 
@@ -777,8 +817,10 @@ function setView(view) {
   els.mapView.classList.toggle("hidden", view !== "map");
   els.labView.classList.toggle("hidden", view !== "lab");
   els.portfolioView.classList.toggle("hidden", view !== "portfolio");
+  els.focusView.classList.toggle("hidden", view !== "focus");
   if (view === "lab") renderPayoff();
   if (view === "portfolio") renderPortfolio();
+  if (view === "focus") renderFocus();
 }
 
 function renderPayoff() {
@@ -890,6 +932,23 @@ function savePortfolio() {
   );
 }
 
+function loadFocus() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(FOCUS_KEY) || "null");
+    state.focusList = Array.isArray(saved?.items) && saved.items.length ? saved.items : STARTER_FOCUS;
+  } catch {
+    state.focusList = STARTER_FOCUS;
+  }
+  saveFocus();
+}
+
+function saveFocus() {
+  localStorage.setItem(
+    FOCUS_KEY,
+    JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), items: state.focusList }),
+  );
+}
+
 function saveFinnhubKey() {
   const key = els.finnhubKeyInput.value.trim();
   if (key) {
@@ -899,6 +958,18 @@ function saveFinnhubKey() {
     localStorage.removeItem(FINNHUB_KEY);
     window.alert("Finnhub key removed.");
   }
+}
+
+async function fetchQuotes(symbols, key) {
+  const unique = [...new Set(symbols.map((symbol) => symbol.trim().toUpperCase()).filter(Boolean))];
+  const quotes = await Promise.all(unique.map(async (symbol) => {
+    const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(key)}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Quote failed for ${symbol}`);
+    const data = await response.json();
+    return [symbol, data];
+  }));
+  return Object.fromEntries(quotes);
 }
 
 async function refreshPrices() {
@@ -912,16 +983,7 @@ async function refreshPrices() {
   els.refreshPricesBtn.textContent = "Refreshing...";
 
   try {
-    const symbols = [...new Set(state.portfolio.map((item) => item.symbol).filter(Boolean))];
-    const quotes = await Promise.all(symbols.map(async (symbol) => {
-      const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(key)}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`Quote failed for ${symbol}`);
-      const data = await response.json();
-      return [symbol, data];
-    }));
-
-    const quoteBySymbol = Object.fromEntries(quotes);
+    const quoteBySymbol = await fetchQuotes(state.portfolio.map((item) => item.symbol), key);
     state.portfolio = state.portfolio.map((holding) => {
       const quote = quoteBySymbol[holding.symbol];
       if (!quote || !Number(quote.c)) return holding;
@@ -1018,6 +1080,118 @@ function renderPortfolio() {
   }).join("");
 }
 
+async function refreshFocusPrices() {
+  const key = (els.finnhubKeyInput.value.trim() || localStorage.getItem(FINNHUB_KEY) || "").trim();
+  if (!key) {
+    window.alert("Paste a Finnhub API key in Portfolio first, then click Save Key.");
+    return;
+  }
+
+  els.refreshFocusBtn.disabled = true;
+  els.refreshFocusBtn.textContent = "Refreshing...";
+
+  try {
+    const quoteBySymbol = await fetchQuotes(state.focusList.map((item) => item.symbol), key);
+    state.focusList = state.focusList.map((item) => {
+      const quote = quoteBySymbol[item.symbol];
+      if (!quote || !Number(quote.c)) return item;
+      return {
+        ...item,
+        price: String(quote.c),
+        lastChange: quote.d,
+        lastChangePercent: quote.dp,
+        lastUpdated: quote.t ? new Date(quote.t * 1000).toISOString() : new Date().toISOString(),
+      };
+    });
+    saveFocus();
+    renderFocus();
+  } catch (error) {
+    window.alert(`Focus price refresh failed: ${error.message}`);
+  } finally {
+    els.refreshFocusBtn.disabled = false;
+    els.refreshFocusBtn.textContent = "Refresh Prices";
+  }
+}
+
+function renderFocus() {
+  if (!state.focusList.length) {
+    state.focusList = STARTER_FOCUS;
+    saveFocus();
+  }
+
+  const high = state.focusList.filter((item) => item.priority === "high").length;
+  const active = state.focusList.filter((item) => item.status === "active").length;
+  const priced = state.focusList.filter((item) => item.price).length;
+  const updated = state.focusList
+    .map((item) => item.lastUpdated)
+    .filter(Boolean)
+    .sort()
+    .pop();
+
+  els.focusStats.innerHTML = [
+    ["Focus Names", String(state.focusList.length)],
+    ["High Priority", String(high)],
+    ["Active Research", String(active)],
+    ["Priced", String(priced)],
+  ].map(([label, value]) => `
+    <div class="portfolio-stat">
+      <span>${label}</span>
+      <strong>${value}</strong>
+    </div>
+  `).join("");
+
+  els.focusCount.textContent = updated ? `Updated ${new Date(updated).toLocaleString()}` : `${state.focusList.length} tracked`;
+  els.focusList.innerHTML = state.focusList.map((item) => {
+    const related = [
+      { label: "Why stocks move", topicId: "stock-price" },
+      { label: "Earnings", topicId: "earnings" },
+      { label: "Valuation", topicId: "valuation" },
+      { label: "Risk sizing", topicId: "position-sizing" },
+    ];
+    return `
+      <article class="focus-card priority-${escapeHtml(item.priority || "medium")}">
+        <div class="holding-top">
+          <div>
+            <strong>${escapeHtml(item.symbol || "NEW")}</strong>
+            <span>${labelForFocusStatus(item.status)} · ${labelForPriority(item.priority)}</span>
+          </div>
+          <div class="holding-actions">
+            <button type="button" data-edit-focus="${item.id}">Edit</button>
+            <button type="button" data-delete-focus="${item.id}">Delete</button>
+          </div>
+        </div>
+        <div class="focus-meta">
+          <span>Price <strong>${item.price ? money(item.price) : "-"}</strong></span>
+          <span>Move <strong class="${pnlClass(Number(item.lastChange) || 0)}">${item.lastUpdated ? changeText(item) : "-"}</strong></span>
+          <span>Status <strong>${labelForFocusStatus(item.status)}</strong></span>
+        </div>
+        ${focusSection("Thesis", item.thesis)}
+        ${focusSection("Catalyst", item.catalyst)}
+        ${focusSection("Risk", item.risk)}
+        ${focusSection("Next Action", item.action)}
+        <div class="holding-tags">${related.map((topic) => `<button type="button" data-topic-link="${topic.topicId}">${topic.label}</button>`).join("")}</div>
+      </article>
+    `;
+  }).join("");
+}
+
+function focusSection(label, value) {
+  return value ? `<p class="focus-note"><span>${label}</span>${escapeHtml(value)}</p>` : "";
+}
+
+function labelForPriority(priority) {
+  return { high: "High priority", medium: "Medium priority", low: "Low priority" }[priority] || "Medium priority";
+}
+
+function labelForFocusStatus(status) {
+  return {
+    watching: "Watching",
+    waiting: "Waiting for setup",
+    active: "Active research",
+    avoid: "Avoid / too risky",
+  }[status] || "Watching";
+}
+
 function relatedForOption(side) {
   if (side === "sellPut") {
     return [
@@ -1110,12 +1284,56 @@ function clearHoldingForm() {
   els.holdingSide.value = "long";
 }
 
+function formFocus() {
+  const existing = els.focusForm.dataset.editing;
+  return {
+    id: existing || newId(els.focusSymbol.value || "focus"),
+    symbol: els.focusSymbol.value.trim().toUpperCase(),
+    priority: els.focusPriority.value,
+    status: els.focusStatus.value,
+    price: els.focusPrice.value,
+    thesis: els.focusThesis.value.trim(),
+    catalyst: els.focusCatalyst.value.trim(),
+    risk: els.focusRisk.value.trim(),
+    action: els.focusAction.value.trim(),
+  };
+}
+
+function fillFocusForm(item) {
+  els.focusForm.dataset.editing = item.id;
+  els.focusSymbol.value = item.symbol || "";
+  els.focusPriority.value = item.priority || "medium";
+  els.focusStatus.value = item.status || "watching";
+  els.focusPrice.value = item.price || "";
+  els.focusThesis.value = item.thesis || "";
+  els.focusCatalyst.value = item.catalyst || "";
+  els.focusRisk.value = item.risk || "";
+  els.focusAction.value = item.action || "";
+}
+
+function clearFocusForm() {
+  els.focusForm.reset();
+  delete els.focusForm.dataset.editing;
+  els.focusPriority.value = "high";
+  els.focusStatus.value = "watching";
+}
+
 function exportPortfolio() {
   const blob = new Blob([JSON.stringify({ version: 1, holdings: state.portfolio }, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = `market-portfolio-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportFocus() {
+  const blob = new Blob([JSON.stringify({ version: 1, items: state.focusList }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `market-focus-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -1131,6 +1349,22 @@ function importPortfolio(file) {
       renderPortfolio();
     } catch {
       window.alert("Import failed. Please choose a portfolio JSON export.");
+    }
+  });
+  reader.readAsText(file);
+}
+
+function importFocus(file) {
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const parsed = JSON.parse(String(reader.result));
+      if (!Array.isArray(parsed.items)) throw new Error("Missing focus names");
+      state.focusList = parsed.items;
+      saveFocus();
+      renderFocus();
+    } catch {
+      window.alert("Import failed. Please choose a focus JSON export.");
     }
   });
   reader.readAsText(file);
@@ -1250,7 +1484,57 @@ els.importPortfolioInput.addEventListener("change", (event) => {
   event.target.value = "";
 });
 
+els.focusForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const item = formFocus();
+  if (!item.symbol) {
+    window.alert("Please enter a ticker symbol.");
+    return;
+  }
+  const index = state.focusList.findIndex((focus) => focus.id === item.id);
+  if (index >= 0) {
+    state.focusList[index] = item;
+  } else {
+    state.focusList.push(item);
+  }
+  saveFocus();
+  clearFocusForm();
+  renderFocus();
+});
+
+els.focusList.addEventListener("click", (event) => {
+  const edit = event.target.closest("[data-edit-focus]");
+  const del = event.target.closest("[data-delete-focus]");
+  const topicLink = event.target.closest("[data-topic-link]");
+  if (topicLink) {
+    selectTopic(topicLink.dataset.topicLink);
+    setView("map");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+  if (edit) {
+    const item = state.focusList.find((focus) => focus.id === edit.dataset.editFocus);
+    if (item) fillFocusForm(item);
+  }
+  if (del) {
+    state.focusList = state.focusList.filter((focus) => focus.id !== del.dataset.deleteFocus);
+    saveFocus();
+    renderFocus();
+  }
+});
+
+els.refreshFocusBtn.addEventListener("click", refreshFocusPrices);
+els.exportFocusBtn.addEventListener("click", exportFocus);
+
+els.importFocusInput.addEventListener("change", (event) => {
+  const [file] = event.target.files;
+  if (file) importFocus(file);
+  event.target.value = "";
+});
+
 loadPortfolio();
+loadFocus();
 render();
 renderPayoff();
 renderPortfolio();
+renderFocus();

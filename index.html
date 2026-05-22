@@ -45,6 +45,7 @@
             <button class="view-tab active" data-view="map" type="button">Map</button>
             <button class="view-tab" data-view="lab" type="button">Strategy Lab</button>
             <button class="view-tab" data-view="portfolio" type="button">Portfolio</button>
+            <button class="view-tab" data-view="focus" type="button">Focus</button>
           </div>
         </header>
 
@@ -224,6 +225,87 @@
                     <textarea id="holdingNotes" rows="3" placeholder="Earnings, rollover plan, risk, thesis..."></textarea>
                   </label>
                   <button class="primary-btn" type="submit">Save Holding</button>
+                </form>
+              </article>
+            </div>
+          </section>
+        </section>
+
+        <section id="focusView" class="view-panel hidden">
+          <section class="portfolio-workspace">
+            <div class="portfolio-header">
+              <div>
+                <p class="eyebrow">Research Watchlist</p>
+                <h3>Focus Board</h3>
+              </div>
+              <div class="portfolio-actions">
+                <button id="refreshFocusBtn" class="mini-btn" type="button">Refresh Prices</button>
+                <button id="exportFocusBtn" class="mini-btn" type="button">Export</button>
+                <label class="mini-btn import-btn">
+                  Import
+                  <input id="importFocusInput" type="file" accept="application/json" />
+                </label>
+              </div>
+            </div>
+
+            <div id="focusStats" class="portfolio-stats"></div>
+
+            <div class="portfolio-grid focus-grid">
+              <article class="portfolio-panel">
+                <div class="pane-head">
+                  <span>Names in focus</span>
+                  <span id="focusCount"></span>
+                </div>
+                <div id="focusList" class="focus-list"></div>
+              </article>
+
+              <article class="portfolio-panel">
+                <div class="pane-head">
+                  <span>Add / Update</span>
+                </div>
+                <form id="focusForm" class="portfolio-form">
+                  <label>
+                    <span>Symbol</span>
+                    <input id="focusSymbol" type="text" placeholder="TSM" />
+                  </label>
+                  <label>
+                    <span>Priority</span>
+                    <select id="focusPriority">
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Status</span>
+                    <select id="focusStatus">
+                      <option value="watching">Watching</option>
+                      <option value="waiting">Waiting for setup</option>
+                      <option value="active">Active research</option>
+                      <option value="avoid">Avoid / too risky</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Current Price</span>
+                    <input id="focusPrice" type="number" step="0.01" placeholder="auto or manual" />
+                  </label>
+                  <label class="wide">
+                    <span>Thesis</span>
+                    <textarea id="focusThesis" rows="3" placeholder="Why this name matters..."></textarea>
+                  </label>
+                  <label class="wide">
+                    <span>Catalyst / What to watch</span>
+                    <textarea id="focusCatalyst" rows="3" placeholder="Earnings, guidance, AI capex, margin, technical level..."></textarea>
+                  </label>
+                  <label class="wide">
+                    <span>Risk / Invalidation</span>
+                    <textarea id="focusRisk" rows="3" placeholder="What would prove the thesis wrong?"></textarea>
+                  </label>
+                  <label class="wide">
+                    <span>Next Action</span>
+                    <textarea id="focusAction" rows="2" placeholder="Wait for pullback, read 10-Q, compare peers..."></textarea>
+                  </label>
+                  <button class="primary-btn" type="submit">Save Focus Name</button>
                 </form>
               </article>
             </div>
