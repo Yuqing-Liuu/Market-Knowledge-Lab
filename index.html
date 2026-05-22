@@ -47,6 +47,7 @@
             <button class="view-tab" data-view="portfolio" type="button">Portfolio</button>
             <button class="view-tab" data-view="focus" type="button">Focus</button>
             <button class="view-tab" data-view="calendar" type="button">Calendar</button>
+            <button class="view-tab" data-view="news" type="button">News</button>
           </div>
         </header>
 
@@ -401,6 +402,51 @@
                 </form>
               </article>
             </div>
+          </section>
+        </section>
+
+        <section id="newsView" class="view-panel hidden">
+          <section class="portfolio-workspace">
+            <div class="portfolio-header">
+              <div>
+                <p class="eyebrow">Ticker News Feed</p>
+                <h3>Realtime News</h3>
+              </div>
+              <div class="portfolio-actions">
+                <button id="loadDefaultNewsBtn" class="mini-btn" type="button">Use My Tickers</button>
+                <button id="refreshNewsBtn" class="mini-btn" type="button">Fetch News</button>
+              </div>
+            </div>
+
+            <div class="news-controls">
+              <label>
+                <span>Tickers</span>
+                <input id="newsTickers" type="text" placeholder="MU, NVDA, TSM" />
+              </label>
+              <label>
+                <span>Lookback</span>
+                <select id="newsLookback">
+                  <option value="3">Last 3 days</option>
+                  <option value="7" selected>Last 7 days</option>
+                  <option value="14">Last 14 days</option>
+                  <option value="30">Last 30 days</option>
+                </select>
+              </label>
+              <label>
+                <span>Filter</span>
+                <input id="newsFilter" type="text" placeholder="AI, earnings, launch..." />
+              </label>
+            </div>
+
+            <div id="newsStats" class="portfolio-stats"></div>
+
+            <article class="portfolio-panel">
+              <div class="pane-head">
+                <span>Latest ticker news</span>
+                <span id="newsCount"></span>
+              </div>
+              <div id="newsList" class="news-list"></div>
+            </article>
           </section>
         </section>
       </main>

@@ -106,6 +106,7 @@ const state = {
   portfolio: [],
   focusList: [],
   calendar: [],
+  news: [],
 };
 
 const els = {
@@ -125,6 +126,7 @@ const els = {
   portfolioView: document.querySelector("#portfolioView"),
   focusView: document.querySelector("#focusView"),
   calendarView: document.querySelector("#calendarView"),
+  newsView: document.querySelector("#newsView"),
   portfolioWorkspace: document.querySelector("#portfolioWorkspace"),
   portfolioStats: document.querySelector("#portfolioStats"),
   portfolioList: document.querySelector("#portfolioList"),
@@ -174,6 +176,14 @@ const els = {
   eventAction: document.querySelector("#eventAction"),
   exportCalendarBtn: document.querySelector("#exportCalendarBtn"),
   importCalendarInput: document.querySelector("#importCalendarInput"),
+  newsTickers: document.querySelector("#newsTickers"),
+  newsLookback: document.querySelector("#newsLookback"),
+  newsFilter: document.querySelector("#newsFilter"),
+  newsStats: document.querySelector("#newsStats"),
+  newsList: document.querySelector("#newsList"),
+  newsCount: document.querySelector("#newsCount"),
+  loadDefaultNewsBtn: document.querySelector("#loadDefaultNewsBtn"),
+  refreshNewsBtn: document.querySelector("#refreshNewsBtn"),
   strategySelect: document.querySelector("#strategySelect"),
   spotInput: document.querySelector("#spotInput"),
   strikeInput: document.querySelector("#strikeInput"),
@@ -858,10 +868,12 @@ function setView(view) {
   els.portfolioView.classList.toggle("hidden", view !== "portfolio");
   els.focusView.classList.toggle("hidden", view !== "focus");
   els.calendarView.classList.toggle("hidden", view !== "calendar");
+  els.newsView.classList.toggle("hidden", view !== "news");
   if (view === "lab") renderPayoff();
   if (view === "portfolio") renderPortfolio();
   if (view === "focus") renderFocus();
   if (view === "calendar") renderCalendar();
+  if (view === "news") renderNews();
 }
 
 function renderPayoff() {
@@ -1028,6 +1040,73 @@ async function fetchQuotes(symbols, key) {
     return [symbol, data];
   }));
   return Object.fromEntries(quotes);
+}
+
+function yyyyMmDd(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function myTickerUniverse() {
+  const portfolioSymbols = state.portfolio.map((item) => item.symbol);
+  const focusSymbols = state.focusList.map((item) => item.symbol);
+  const eventSymbols = state.calendar.map((item) => item.ticker);
+  return [...new Set([...portfolioSymbols, ...focusSymbols, ...eventSymbols]
+    .join(",")
+    .split(/[\s,;]+/)
+    .map((symbol) => symbol.trim().toUpperCase())
+    .filter(Boolean))];
+}
+
+function setDefaultNewsTickers() {
+  els.newsTickers.value = myTickerUniverse().join(", ");
+}
+
+async function fetchCompanyNews(symbol, key, from, to) {
+  const url = `https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(symbol)}&from=${from}&to=${to}&token=${encodeURIComponent(key)}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`News failed for ${symbol}`);
+  const data = await response.json();
+  return Array.isArray(data) ? data.map((item) => ({ ...item, querySymbol: symbol })) : [];
+}
+
+async function refreshNews() {
+  const key = (els.finnhubKeyInput.value.trim() || localStorage.getItem(FINNHUB_KEY) || "").trim();
+  if (!key) {
+    window.alert("Paste a Finnhub API key in Portfolio first, then click Save Key.");
+    return;
+  }
+
+  const symbols = [...new Set(els.newsTickers.value
+    .split(/[\s,;]+/)
+    .map((symbol) => symbol.trim().toUpperCase())
+    .filter(Boolean))];
+  if (!symbols.length) {
+    window.alert("Enter at least one ticker, or click Use My Tickers.");
+    return;
+  }
+
+  const toDate = new Date();
+  const fromDate = new Date();
+  fromDate.setDate(toDate.getDate() - (Number(els.newsLookback.value) || 7));
+  const from = yyyyMmDd(fromDate);
+  const to = yyyyMmDd(toDate);
+
+  els.refreshNewsBtn.disabled = true;
+  els.refreshNewsBtn.textContent = "Fetching...";
+
+  try {
+    const batches = await Promise.all(symbols.map((symbol) => fetchCompanyNews(symbol, key, from, to)));
+    state.news = batches.flat()
+      .filter((item) => item.headline || item.summary)
+      .sort((a, b) => Number(b.datetime || 0) - Number(a.datetime || 0))
+      .slice(0, 120);
+    renderNews();
+  } catch (error) {
+    window.alert(`News fetch failed: ${error.message}`);
+  } finally {
+    els.refreshNewsBtn.disabled = false;
+    els.refreshNewsBtn.textContent = "Fetch News";
+  }
 }
 
 async function refreshPrices() {
@@ -1347,6 +1426,55 @@ function labelForEventStatus(status) {
     confirmed: "Confirmed",
     done: "Done",
   }[status] || "Watching";
+}
+
+function renderNews() {
+  if (!els.newsTickers.value.trim()) setDefaultNewsTickers();
+
+  const query = els.newsFilter.value.trim().toLowerCase();
+  const filtered = state.news.filter((item) => {
+    if (!query) return true;
+    return [item.headline, item.summary, item.source, item.querySymbol, item.related]
+      .join(" ")
+      .toLowerCase()
+      .includes(query);
+  });
+  const symbols = [...new Set(filtered.map((item) => item.querySymbol).filter(Boolean))];
+  const sources = [...new Set(filtered.map((item) => item.source).filter(Boolean))];
+  const newest = filtered[0]?.datetime ? new Date(filtered[0].datetime * 1000) : null;
+
+  els.newsStats.innerHTML = [
+    ["Articles", String(filtered.length)],
+    ["Tickers", String(symbols.length)],
+    ["Sources", String(sources.length)],
+    ["Newest", newest ? newest.toLocaleString() : "-"],
+  ].map(([label, value]) => `
+    <div class="portfolio-stat">
+      <span>${label}</span>
+      <strong>${value}</strong>
+    </div>
+  `).join("");
+
+  els.newsCount.textContent = state.news.length ? `${filtered.length} shown` : "not loaded";
+  els.newsList.innerHTML = filtered.length ? filtered.map((item) => `
+    <article class="news-card">
+      <div class="news-card-head">
+        <span>${escapeHtml(item.querySymbol || item.related || "NEWS")}</span>
+        <small>${item.datetime ? new Date(item.datetime * 1000).toLocaleString() : ""}</small>
+      </div>
+      <h4>${escapeHtml(item.headline || "Untitled news")}</h4>
+      ${item.summary ? `<p>${escapeHtml(item.summary)}</p>` : ""}
+      <div class="news-meta">
+        <span>${escapeHtml(item.source || "Unknown source")}</span>
+        ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Open story</a>` : ""}
+      </div>
+    </article>
+  `).join("") : `
+    <div class="empty-state">
+      <strong>No news loaded yet.</strong>
+      <span>Click Use My Tickers, then Fetch News. Finnhub company-news works best for listed tickers such as MU, NVDA, TSM, INTC, LITE, AAOI, NBIS.</span>
+    </div>
+  `;
 }
 
 function relatedForOption(side) {
@@ -1799,6 +1927,16 @@ els.importCalendarInput.addEventListener("change", (event) => {
   event.target.value = "";
 });
 
+els.loadDefaultNewsBtn.addEventListener("click", () => {
+  setDefaultNewsTickers();
+  renderNews();
+});
+
+els.refreshNewsBtn.addEventListener("click", refreshNews);
+els.newsFilter.addEventListener("input", renderNews);
+els.newsLookback.addEventListener("change", renderNews);
+els.newsTickers.addEventListener("input", renderNews);
+
 loadPortfolio();
 loadFocus();
 loadCalendar();
@@ -1807,3 +1945,4 @@ renderPayoff();
 renderPortfolio();
 renderFocus();
 renderCalendar();
+renderNews();
