@@ -103,7 +103,6 @@ const state = {
   search: "",
   sort: "name",
   view: "map",
-  portfolio: [],
   focusList: [],
   calendar: [],
   news: [],
@@ -123,29 +122,11 @@ const els = {
   viewTabs: document.querySelectorAll(".view-tab"),
   mapView: document.querySelector("#mapView"),
   labView: document.querySelector("#labView"),
-  portfolioView: document.querySelector("#portfolioView"),
   focusView: document.querySelector("#focusView"),
   calendarView: document.querySelector("#calendarView"),
   newsView: document.querySelector("#newsView"),
-  portfolioWorkspace: document.querySelector("#portfolioWorkspace"),
-  portfolioStats: document.querySelector("#portfolioStats"),
-  portfolioList: document.querySelector("#portfolioList"),
-  portfolioCount: document.querySelector("#portfolioCount"),
-  portfolioForm: document.querySelector("#portfolioForm"),
-  holdingKind: document.querySelector("#holdingKind"),
-  holdingSymbol: document.querySelector("#holdingSymbol"),
-  holdingSide: document.querySelector("#holdingSide"),
-  holdingQty: document.querySelector("#holdingQty"),
-  holdingCost: document.querySelector("#holdingCost"),
-  holdingPrice: document.querySelector("#holdingPrice"),
-  holdingStrike: document.querySelector("#holdingStrike"),
-  holdingExpiration: document.querySelector("#holdingExpiration"),
-  holdingNotes: document.querySelector("#holdingNotes"),
   finnhubKeyInput: document.querySelector("#finnhubKeyInput"),
   saveFinnhubKeyBtn: document.querySelector("#saveFinnhubKeyBtn"),
-  refreshPricesBtn: document.querySelector("#refreshPricesBtn"),
-  exportPortfolioBtn: document.querySelector("#exportPortfolioBtn"),
-  importPortfolioInput: document.querySelector("#importPortfolioInput"),
   focusStats: document.querySelector("#focusStats"),
   focusList: document.querySelector("#focusList"),
   focusCount: document.querySelector("#focusCount"),
@@ -196,21 +177,10 @@ const els = {
 const topicById = Object.fromEntries(TOPICS.map((item) => [item.id, item]));
 const categoryById = Object.fromEntries(CATEGORIES.map((item) => [item.id, item]));
 const difficultyRank = { basic: 1, intermediate: 2, advanced: 3 };
-const PORTFOLIO_KEY = "market-knowledge-portfolio-v1";
 const FOCUS_KEY = "market-knowledge-focus-v1";
 const CALENDAR_KEY = "market-knowledge-calendar-v1";
 const NEWS_TRANSLATION_KEY = "market-knowledge-news-title-translations-v1";
 const FINNHUB_KEY = "market-knowledge-finnhub-key";
-const STARTER_HOLDINGS = [
-  starterStock("MU"),
-  starterStock("INTC"),
-  starterStock("LITE"),
-  starterStock("AAOI"),
-  starterStock("NBIS"),
-  starterStock("TSM"),
-  starterOption("NOK"),
-  starterOption("NVDA"),
-];
 
 const STARTER_FOCUS = [
   focusName("MU", "high", "active", "Memory cycle and AI server demand; watch DRAM/NAND pricing and capex discipline."),
@@ -401,36 +371,6 @@ const FORMULA_LIBRARY = {
 
 function topic(id, title, english, category, difficulty, related, summary, mechanics, pitfalls) {
   return { id, title, english, category, difficulty, related, summary, mechanics, pitfalls };
-}
-
-function starterStock(symbol) {
-  return {
-    id: newId(symbol),
-    kind: "stock",
-    symbol,
-    side: "long",
-    qty: "",
-    cost: "",
-    price: "",
-    strike: "",
-    expiration: "",
-    notes: "",
-  };
-}
-
-function starterOption(symbol) {
-  return {
-    id: newId(symbol),
-    kind: "option",
-    symbol,
-    side: "buyCall",
-    qty: "",
-    cost: "",
-    price: "",
-    strike: "",
-    expiration: "",
-    notes: "",
-  };
 }
 
 function focusName(symbol, priority = "medium", status = "watching", thesis = "") {
@@ -867,12 +807,10 @@ function setView(view) {
   els.viewTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.view === view));
   els.mapView.classList.toggle("hidden", view !== "map");
   els.labView.classList.toggle("hidden", view !== "lab");
-  els.portfolioView.classList.toggle("hidden", view !== "portfolio");
   els.focusView.classList.toggle("hidden", view !== "focus");
   els.calendarView.classList.toggle("hidden", view !== "calendar");
   els.newsView.classList.toggle("hidden", view !== "news");
   if (view === "lab") renderPayoff();
-  if (view === "portfolio") renderPortfolio();
   if (view === "focus") renderFocus();
   if (view === "calendar") renderCalendar();
   if (view === "news") renderNews();
@@ -958,35 +896,6 @@ function money(value) {
   return number.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 2 });
 }
 
-function loadPortfolio() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(PORTFOLIO_KEY) || "null");
-    state.portfolio = Array.isArray(saved?.holdings) && saved.holdings.length ? saved.holdings : STARTER_HOLDINGS;
-  } catch {
-    state.portfolio = STARTER_HOLDINGS;
-  }
-  ensureStarterHoldings();
-  els.finnhubKeyInput.value = localStorage.getItem(FINNHUB_KEY) || "";
-}
-
-function ensureStarterHoldings() {
-  const existing = new Set(state.portfolio.map((holding) => `${holding.kind}:${holding.symbol}`));
-  STARTER_HOLDINGS.forEach((holding) => {
-    const key = `${holding.kind}:${holding.symbol}`;
-    if (!existing.has(key)) {
-      state.portfolio.push({ ...holding, id: newId(holding.symbol) });
-    }
-  });
-  savePortfolio();
-}
-
-function savePortfolio() {
-  localStorage.setItem(
-    PORTFOLIO_KEY,
-    JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), holdings: state.portfolio }),
-  );
-}
-
 function loadFocus() {
   try {
     const saved = JSON.parse(localStorage.getItem(FOCUS_KEY) || "null");
@@ -1021,6 +930,10 @@ function saveCalendar() {
   );
 }
 
+function loadFinnhubKey() {
+  els.finnhubKeyInput.value = localStorage.getItem(FINNHUB_KEY) || "";
+}
+
 function saveFinnhubKey() {
   const key = els.finnhubKeyInput.value.trim();
   if (key) {
@@ -1049,10 +962,9 @@ function yyyyMmDd(date) {
 }
 
 function myTickerUniverse() {
-  const portfolioSymbols = state.portfolio.map((item) => item.symbol);
   const focusSymbols = state.focusList.map((item) => item.symbol);
   const eventSymbols = state.calendar.map((item) => item.ticker);
-  return [...new Set([...portfolioSymbols, ...focusSymbols, ...eventSymbols]
+  return [...new Set([...focusSymbols, ...eventSymbols]
     .join(",")
     .split(/[\s,;]+/)
     .map((symbol) => symbol.trim().toUpperCase())
@@ -1129,7 +1041,7 @@ async function translateNewsTitles() {
 async function refreshNews() {
   const key = (els.finnhubKeyInput.value.trim() || localStorage.getItem(FINNHUB_KEY) || "").trim();
   if (!key) {
-    window.alert("Paste a Finnhub API key in Portfolio first, then click Save Key.");
+    window.alert("Paste a Finnhub API key in News first, then click Save Key.");
     return;
   }
 
@@ -1171,148 +1083,7 @@ async function refreshNews() {
   }
 }
 
-async function refreshPrices() {
-  const key = (els.finnhubKeyInput.value.trim() || localStorage.getItem(FINNHUB_KEY) || "").trim();
-  if (!key) {
-    window.alert("Paste a Finnhub API key first, then click Save Key.");
-    return;
-  }
-
-  els.refreshPricesBtn.disabled = true;
-  els.refreshPricesBtn.textContent = "Refreshing...";
-
-  try {
-    const quoteBySymbol = await fetchQuotes(state.portfolio.map((item) => item.symbol), key);
-    state.portfolio = state.portfolio.map((holding) => {
-      const quote = quoteBySymbol[holding.symbol];
-      if (!quote || !Number(quote.c)) return holding;
-      return {
-        ...holding,
-        price: String(quote.c),
-        lastChange: quote.d,
-        lastChangePercent: quote.dp,
-        lastUpdated: quote.t ? new Date(quote.t * 1000).toISOString() : new Date().toISOString(),
-      };
-    });
-    savePortfolio();
-    renderPortfolio();
-  } catch (error) {
-    window.alert(`Price refresh failed: ${error.message}`);
-  } finally {
-    els.refreshPricesBtn.disabled = false;
-    els.refreshPricesBtn.textContent = "Refresh Prices";
-  }
-}
-
-function holdingMath(holding) {
-  const qty = Number(holding.qty) || 0;
-  const cost = Number(holding.cost) || 0;
-  const price = Number(holding.price) || 0;
-  const multiplier = holding.kind === "option" ? 100 : 1;
-  const direction = holding.kind === "option" && holding.side.startsWith("sell") ? -1 : 1;
-  const costBasis = qty * cost * multiplier;
-  const marketValue = qty * price * multiplier * direction;
-  const pnl = holding.kind === "option" && holding.side.startsWith("sell")
-    ? qty * (cost - price) * multiplier
-    : qty * (price - cost) * multiplier;
-  return { qty, cost, price, multiplier, costBasis, marketValue, pnl };
-}
-
-function renderPortfolio() {
-  if (!state.portfolio.length) {
-    state.portfolio = STARTER_HOLDINGS;
-    savePortfolio();
-  }
-
-  const rows = state.portfolio.map((holding) => ({ holding, math: holdingMath(holding) }));
-  const totalValue = rows.reduce((sum, row) => sum + row.math.marketValue, 0);
-  const totalCost = rows.reduce((sum, row) => sum + row.math.costBasis, 0);
-  const totalPnl = rows.reduce((sum, row) => sum + row.math.pnl, 0);
-  const priced = rows.filter((row) => row.math.qty && row.math.price);
-
-  els.portfolioStats.innerHTML = [
-    ["Market Value", money(totalValue)],
-    ["Cost / Premium Basis", money(totalCost)],
-    ["Unrealized P/L", money(totalPnl)],
-    ["Tracked Names", String(state.portfolio.length)],
-  ].map(([label, value]) => `
-    <div class="portfolio-stat">
-      <span>${label}</span>
-      <strong class="${label.includes("P/L") ? (totalPnl >= 0 ? "positive" : "negative") : ""}">${value}</strong>
-    </div>
-  `).join("");
-
-  els.portfolioCount.textContent = `${priced.length} priced`;
-  els.portfolioList.innerHTML = state.portfolio.map((holding) => {
-    const math = holdingMath(holding);
-    const related = holding.kind === "option"
-      ? relatedForOption(holding.side)
-      : [
-          { label: "股票为什么会涨跌", topicId: "stock-price" },
-          { label: "财报与预期差", topicId: "earnings" },
-          { label: "仓位管理", topicId: "position-sizing" },
-        ];
-    return `
-      <article class="holding-card">
-        <div class="holding-top">
-          <div>
-            <strong>${escapeHtml(holding.symbol || "NEW")}</strong>
-            <span>${holding.kind === "option" ? labelForSide(holding.side) : "Long Stock"}</span>
-          </div>
-          <div class="holding-actions">
-            <button type="button" data-edit-holding="${holding.id}">Edit</button>
-            <button type="button" data-delete-holding="${holding.id}">Delete</button>
-          </div>
-        </div>
-        <div class="holding-metrics">
-          <span>Qty <strong>${holding.qty || "-"}</strong></span>
-          <span>Cost <strong>${holding.cost ? money(holding.cost) : "-"}</strong></span>
-          <span>Price <strong>${holding.price ? money(holding.price) : "-"}</strong></span>
-          <span>P/L <strong class="${pnlClass(math.pnl)}">${holding.qty && holding.cost && holding.price ? money(math.pnl) : "-"}</strong></span>
-        </div>
-        ${holding.lastUpdated ? `<p class="holding-detail">Quote ${changeText(holding)} · ${new Date(holding.lastUpdated).toLocaleString()}</p>` : ""}
-        ${holding.kind === "option" ? `<p class="holding-detail">Strike ${holding.strike || "-"} · Exp ${holding.expiration || "-"}</p>` : ""}
-        ${holding.notes ? `<p class="holding-notes">${escapeHtml(holding.notes)}</p>` : ""}
-        <div class="holding-tags">${related.map((item) => `<button type="button" data-topic-link="${item.topicId}">${item.label}</button>`).join("")}</div>
-      </article>
-    `;
-  }).join("");
-}
-
-async function refreshFocusPrices() {
-  const key = (els.finnhubKeyInput.value.trim() || localStorage.getItem(FINNHUB_KEY) || "").trim();
-  if (!key) {
-    window.alert("Paste a Finnhub API key in Portfolio first, then click Save Key.");
-    return;
-  }
-
-  els.refreshFocusBtn.disabled = true;
-  els.refreshFocusBtn.textContent = "Refreshing...";
-
-  try {
-    const quoteBySymbol = await fetchQuotes(state.focusList.map((item) => item.symbol), key);
-    state.focusList = state.focusList.map((item) => {
-      const quote = quoteBySymbol[item.symbol];
-      if (!quote || !Number(quote.c)) return item;
-      return {
-        ...item,
-        price: String(quote.c),
-        lastChange: quote.d,
-        lastChangePercent: quote.dp,
-        lastUpdated: quote.t ? new Date(quote.t * 1000).toISOString() : new Date().toISOString(),
-      };
-    });
-    saveFocus();
-    renderFocus();
-  } catch (error) {
-    window.alert(`Focus price refresh failed: ${error.message}`);
-  } finally {
-    els.refreshFocusBtn.disabled = false;
-    els.refreshFocusBtn.textContent = "Refresh Prices";
-  }
-}
-
-function renderFocus() {
+async function renderFocus() {
   if (!state.focusList.length) {
     state.focusList = STARTER_FOCUS;
     saveFocus();
@@ -1542,49 +1313,6 @@ function renderNews() {
   `;
 }
 
-function relatedForOption(side) {
-  if (side === "sellPut") {
-    return [
-      { label: "Sell Put", topicId: "sell-put" },
-      { label: "Assignment", topicId: "assignment" },
-      { label: "Theta", topicId: "theta" },
-      { label: "Rollover", topicId: "rollover" },
-    ];
-  }
-  if (side === "sellCall") {
-    return [
-      { label: "Sell Call", topicId: "sell-call" },
-      { label: "Covered Call", topicId: "covered-call" },
-      { label: "Assignment", topicId: "assignment" },
-      { label: "Gamma", topicId: "gamma" },
-    ];
-  }
-  if (side === "buyPut") {
-    return [
-      { label: "Buy Put", topicId: "buy-put" },
-      { label: "Protective Put", topicId: "protective-put" },
-      { label: "Tail Risk", topicId: "tail-risk" },
-      { label: "Vega", topicId: "vega" },
-    ];
-  }
-  return [
-    { label: "Buy Call", topicId: "buy-call" },
-    { label: "Delta", topicId: "delta" },
-    { label: "Vega", topicId: "vega" },
-    { label: "Gamma", topicId: "gamma" },
-  ];
-}
-
-function labelForSide(side) {
-  return {
-    long: "Long Stock",
-    buyCall: "Buy Call",
-    buyPut: "Buy Put",
-    sellPut: "Sell Put",
-    sellCall: "Sell Call",
-  }[side] || side;
-}
-
 function changeText(holding) {
   const change = Number(holding.lastChange);
   const pct = Number(holding.lastChangePercent);
@@ -1597,41 +1325,6 @@ function pnlClass(value) {
   if (value > 0) return "positive";
   if (value < 0) return "negative";
   return "";
-}
-
-function formHolding() {
-  const existing = els.portfolioForm.dataset.editing;
-  return {
-    id: existing || newId(els.holdingSymbol.value || "holding"),
-    kind: els.holdingKind.value,
-    symbol: els.holdingSymbol.value.trim().toUpperCase(),
-    side: els.holdingSide.value,
-    qty: els.holdingQty.value,
-    cost: els.holdingCost.value,
-    price: els.holdingPrice.value,
-    strike: els.holdingStrike.value,
-    expiration: els.holdingExpiration.value,
-    notes: els.holdingNotes.value.trim(),
-  };
-}
-
-function fillHoldingForm(holding) {
-  els.portfolioForm.dataset.editing = holding.id;
-  els.holdingKind.value = holding.kind || "stock";
-  els.holdingSymbol.value = holding.symbol || "";
-  els.holdingSide.value = holding.side || "long";
-  els.holdingQty.value = holding.qty || "";
-  els.holdingCost.value = holding.cost || "";
-  els.holdingPrice.value = holding.price || "";
-  els.holdingStrike.value = holding.strike || "";
-  els.holdingExpiration.value = holding.expiration || "";
-  els.holdingNotes.value = holding.notes || "";
-}
-
-function clearHoldingForm() {
-  els.portfolioForm.reset();
-  delete els.portfolioForm.dataset.editing;
-  els.holdingSide.value = "long";
 }
 
 function formFocus() {
@@ -1705,16 +1398,6 @@ function clearCalendarForm() {
   els.eventStatus.value = "rumor";
 }
 
-function exportPortfolio() {
-  const blob = new Blob([JSON.stringify({ version: 1, holdings: state.portfolio }, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `market-portfolio-${new Date().toISOString().slice(0, 10)}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 function exportFocus() {
   const blob = new Blob([JSON.stringify({ version: 1, items: state.focusList }, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -1733,22 +1416,6 @@ function exportCalendar() {
   link.download = `market-calendar-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   URL.revokeObjectURL(url);
-}
-
-function importPortfolio(file) {
-  const reader = new FileReader();
-  reader.addEventListener("load", () => {
-    try {
-      const parsed = JSON.parse(String(reader.result));
-      if (!Array.isArray(parsed.holdings)) throw new Error("Missing holdings");
-      state.portfolio = parsed.holdings;
-      savePortfolio();
-      renderPortfolio();
-    } catch {
-      window.alert("Import failed. Please choose a portfolio JSON export.");
-    }
-  });
-  reader.readAsText(file);
 }
 
 function importFocus(file) {
@@ -1847,55 +1514,7 @@ els.focusBtn.addEventListener("click", () => {
   input.addEventListener("input", renderPayoff);
 });
 
-els.portfolioForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const holding = formHolding();
-  if (!holding.symbol) {
-    window.alert("Please enter a ticker symbol.");
-    return;
-  }
-  const index = state.portfolio.findIndex((item) => item.id === holding.id);
-  if (index >= 0) {
-    state.portfolio[index] = holding;
-  } else {
-    state.portfolio.push(holding);
-  }
-  savePortfolio();
-  clearHoldingForm();
-  renderPortfolio();
-});
-
-els.portfolioList.addEventListener("click", (event) => {
-  const edit = event.target.closest("[data-edit-holding]");
-  const del = event.target.closest("[data-delete-holding]");
-  const topicLink = event.target.closest("[data-topic-link]");
-  if (topicLink) {
-    selectTopic(topicLink.dataset.topicLink);
-    setView("map");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    return;
-  }
-  if (edit) {
-    const holding = state.portfolio.find((item) => item.id === edit.dataset.editHolding);
-    if (holding) fillHoldingForm(holding);
-  }
-  if (del) {
-    state.portfolio = state.portfolio.filter((item) => item.id !== del.dataset.deleteHolding);
-    savePortfolio();
-    renderPortfolio();
-  }
-});
-
-els.exportPortfolioBtn.addEventListener("click", exportPortfolio);
-
 els.saveFinnhubKeyBtn.addEventListener("click", saveFinnhubKey);
-els.refreshPricesBtn.addEventListener("click", refreshPrices);
-
-els.importPortfolioInput.addEventListener("change", (event) => {
-  const [file] = event.target.files;
-  if (file) importPortfolio(file);
-  event.target.value = "";
-});
 
 els.focusForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -2003,12 +1622,11 @@ els.newsFilter.addEventListener("input", renderNews);
 els.newsLookback.addEventListener("change", renderNews);
 els.newsTickers.addEventListener("input", renderNews);
 
-loadPortfolio();
+loadFinnhubKey();
 loadFocus();
 loadCalendar();
 render();
 renderPayoff();
-renderPortfolio();
 renderFocus();
 renderCalendar();
 renderNews();
