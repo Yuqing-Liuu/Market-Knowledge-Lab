@@ -106,6 +106,9 @@ const state = {
   focusList: [],
   calendar: [],
   news: [],
+  researchItems: [],
+  researchFilter: "All",
+  activeResearchId: "",
 };
 
 const els = {
@@ -123,6 +126,7 @@ const els = {
   mapView: document.querySelector("#mapView"),
   labView: document.querySelector("#labView"),
   focusView: document.querySelector("#focusView"),
+  researchView: document.querySelector("#researchView"),
   calendarView: document.querySelector("#calendarView"),
   newsView: document.querySelector("#newsView"),
   finnhubKeyInput: document.querySelector("#finnhubKeyInput"),
@@ -142,6 +146,27 @@ const els = {
   refreshFocusBtn: document.querySelector("#refreshFocusBtn"),
   exportFocusBtn: document.querySelector("#exportFocusBtn"),
   importFocusInput: document.querySelector("#importFocusInput"),
+  researchStats: document.querySelector("#researchStats"),
+  researchFilters: document.querySelector("#researchFilters"),
+  researchCount: document.querySelector("#researchCount"),
+  researchCards: document.querySelector("#researchCards"),
+  researchDetail: document.querySelector("#researchDetail"),
+  researchUpdated: document.querySelector("#researchUpdated"),
+  researchForm: document.querySelector("#researchForm"),
+  researchId: document.querySelector("#researchId"),
+  researchTicker: document.querySelector("#researchTicker"),
+  researchCompany: document.querySelector("#researchCompany"),
+  researchStatus: document.querySelector("#researchStatus"),
+  researchConviction: document.querySelector("#researchConviction"),
+  researchConvictionValue: document.querySelector("#researchConvictionValue"),
+  researchSector: document.querySelector("#researchSector"),
+  researchIndustry: document.querySelector("#researchIndustry"),
+  researchMarketCap: document.querySelector("#researchMarketCap"),
+  researchSectionFields: document.querySelector("#researchSectionFields"),
+  newResearchBtn: document.querySelector("#newResearchBtn"),
+  clearResearchFormBtn: document.querySelector("#clearResearchFormBtn"),
+  exportResearchBtn: document.querySelector("#exportResearchBtn"),
+  importResearchInput: document.querySelector("#importResearchInput"),
   calendarStats: document.querySelector("#calendarStats"),
   calendarList: document.querySelector("#calendarList"),
   calendarCount: document.querySelector("#calendarCount"),
@@ -178,9 +203,244 @@ const topicById = Object.fromEntries(TOPICS.map((item) => [item.id, item]));
 const categoryById = Object.fromEntries(CATEGORIES.map((item) => [item.id, item]));
 const difficultyRank = { basic: 1, intermediate: 2, advanced: 3 };
 const FOCUS_KEY = "market-knowledge-focus-v1";
+const RESEARCH_KEY = "ytrade-research";
 const CALENDAR_KEY = "market-knowledge-calendar-v1";
 const NEWS_TRANSLATION_KEY = "market-knowledge-news-title-translations-v1";
 const FINNHUB_KEY = "market-knowledge-finnhub-key";
+
+const RESEARCH_STATUSES = ["All", "Watching", "Researching", "Ready to Buy", "Hold", "Avoid"];
+
+const RESEARCH_SECTIONS = [
+  {
+    id: "basicInfo",
+    title: "1. 公司基本信息",
+    subtitle: "Company basic information",
+    fields: [
+      ["ticker", "Ticker"],
+      ["companyName", "Company name"],
+      ["sector", "Sector"],
+      ["industry", "Industry"],
+      ["marketCap", "Market cap"],
+    ],
+  },
+  {
+    id: "business",
+    title: "2. 商业模式",
+    subtitle: "Business model",
+    fields: [
+      ["howItMakesMoney", "How it makes money"],
+      ["keyProducts", "Key products"],
+      ["mainCustomers", "Main customers"],
+      ["moat", "Moat"],
+    ],
+  },
+  {
+    id: "growth",
+    title: "3. 增长驱动",
+    subtitle: "Growth drivers",
+    fields: [
+      ["nearTerm", "Near-term drivers"],
+      ["longTerm", "Long-term drivers"],
+    ],
+  },
+  {
+    id: "financial",
+    title: "4. 财务质量",
+    subtitle: "Financial quality",
+    fields: [
+      ["revenueTrend", "Revenue trend"],
+      ["marginTrend", "Margin trend"],
+      ["freeCashFlow", "Free cash flow"],
+      ["debt", "Debt"],
+      ["dilutionBuybacks", "Dilution / buybacks"],
+    ],
+  },
+  {
+    id: "valuation",
+    title: "5. 估值",
+    subtitle: "Valuation",
+    fields: [
+      ["currentMultiple", "Current multiple"],
+      ["peerComparison", "Peer comparison"],
+      ["historicalRange", "Historical range"],
+      ["cheapFairExpensive", "Cheap / fair / expensive"],
+    ],
+  },
+  {
+    id: "expectations",
+    title: "6. 市场预期",
+    subtitle: "Market expectations",
+    fields: [
+      ["pricedIn", "What is priced in"],
+      ["beatScenario", "Beat scenario"],
+      ["disappointScenario", "Disappoint scenario"],
+    ],
+  },
+  {
+    id: "risks",
+    title: "7. 风险",
+    subtitle: "Risks",
+    fields: [
+      ["companySpecific", "Company-specific risk"],
+      ["industry", "Industry risk"],
+      ["valuation", "Valuation risk"],
+      ["execution", "Execution risk"],
+    ],
+  },
+  {
+    id: "tradingPlan",
+    title: "8. 交易计划",
+    subtitle: "Trading plan",
+    fields: [
+      ["whyNowOrWait", "Why now / why wait"],
+      ["targetEntryZone", "Target entry zone"],
+      ["invalidationCondition", "Invalidation condition"],
+      ["timeHorizon", "Time horizon"],
+      ["starterPositionSize", "Starter position size"],
+      ["addTrimRules", "Add / trim rules"],
+    ],
+  },
+  {
+    id: "finalSummary",
+    title: "9. 最终结论",
+    subtitle: "Final conclusion",
+    fields: [
+      ["bullCase", "Bull case"],
+      ["bearCase", "Bear case"],
+      ["baseCase", "Base case"],
+      ["conclusion", "Conclusion"],
+    ],
+  },
+];
+
+const STARTER_RESEARCH = [
+  researchRecord({
+    id: "mock-nvda-001",
+    ticker: "NVDA",
+    companyName: "NVIDIA Corporation",
+    sector: "Technology",
+    industry: "Semiconductors",
+    marketCap: "~$2.7T",
+    status: "Ready to Buy",
+    convictionScore: 8,
+    updatedAt: "2026-05-20T14:30:00.000Z",
+    business: {
+      howItMakesMoney: "NVIDIA sells GPUs, networking, systems, and software platforms. Data Center is the main engine, driven by AI training and inference demand from hyperscalers, cloud providers, enterprises, and sovereign AI buyers.",
+      keyProducts: "H100/H200, Blackwell B100/B200, GB200 NVL systems, NVLink, InfiniBand/Ethernet networking, CUDA, TensorRT, NIM, and RTX gaming/workstation GPUs.",
+      mainCustomers: "Microsoft, Meta, Amazon, Google, Oracle, sovereign AI projects, OEMs, cloud customers, workstation users, and PC gamers.",
+      moat: "CUDA developer lock-in, full-stack hardware/software integration, networking scale, ecosystem depth, and a multi-generation product cadence that competitors struggle to match.",
+    },
+    growth: {
+      nearTerm: "Blackwell ramp, constrained supply, networking attach, sovereign AI capex, and hyperscaler cluster build-outs.",
+      longTerm: "Inference workloads, enterprise AI adoption, software subscriptions, robotics, autonomous vehicles, and data-center platform expansion.",
+    },
+    financial: {
+      revenueTrend: "Revenue growth remains dominated by Data Center. Growth will decelerate from extreme AI-boom rates, but demand visibility is still unusually strong.",
+      marginTrend: "Gross margin is structurally high because NVIDIA captures system-level value, not only chip value. Watch Blackwell ramp costs and pricing pressure.",
+      freeCashFlow: "Very high free-cash-flow conversion, with a strong cash balance and limited balance-sheet stress.",
+      debt: "Low leverage relative to earnings power and cash flow.",
+      dilutionBuybacks: "Buybacks help offset stock compensation; watch whether SBC expands faster than revenue quality.",
+    },
+    valuation: {
+      currentMultiple: "Premium multiple, but less extreme when compared with growth, margin, and market share durability.",
+      peerComparison: "Trades above AMD, AVGO, and legacy semis because it has stronger AI accelerator share, margins, and software ecosystem.",
+      historicalRange: "Pre-AI NVDA often traded at 20-35x forward earnings; AI leadership expanded the acceptable range.",
+      cheapFairExpensive: "Fair to slightly attractive if you believe AI capex has multi-year durability; expensive if growth normalizes quickly.",
+    },
+    expectations: {
+      pricedIn: "Continued Data Center strength, Blackwell execution, no major hyperscaler capex pause, and sustained high margins.",
+      beatScenario: "Sovereign AI accelerates, inference demand surprises, networking grows faster, software revenue starts to matter.",
+      disappointScenario: "Export controls expand, Blackwell delays appear, hyperscalers enter a digestion phase, or AMD gains meaningful share.",
+    },
+    risks: {
+      companySpecific: "Customer concentration, export restrictions, supply-chain dependence, and product-cycle execution.",
+      industry: "Semiconductor cyclicality, AI ROI questions, and capex digestion risk.",
+      valuation: "Multiple compression can be severe if growth decelerates faster than expected.",
+      execution: "Rack-scale Blackwell systems are complex; any thermal, power, or delivery issue can reset expectations.",
+    },
+    tradingPlan: {
+      whyNowOrWait: "Starter position is reasonable on pullbacks if thesis remains intact; avoid chasing after sharp multiple expansion.",
+      targetEntryZone: "Prefer staged entries after broad market weakness or temporary AI-capex fear.",
+      invalidationCondition: "Two quarters of Data Center revenue decline, structural margin break below expectations, or credible GPU share loss.",
+      timeHorizon: "18-36 months.",
+      starterPositionSize: "Small starter, then add only when thesis and valuation both improve.",
+      addTrimRules: "Add on thesis-confirming pullbacks; trim if valuation expands without estimate upgrades.",
+    },
+    finalSummary: {
+      bullCase: "AI accelerator demand stays supply-constrained, NVIDIA keeps platform dominance, and software improves revenue quality.",
+      bearCase: "Capex digestion, export controls, competition, or multiple compression drive a large drawdown.",
+      baseCase: "High-quality compounder with above-market growth, but position sizing must respect valuation risk.",
+      conclusion: "Best-in-class AI infrastructure company. Suitable for a planned, staged position rather than emotional chasing.",
+    },
+    followUp: {
+      watchItems: "Data Center revenue, gross margin, Blackwell delivery, hyperscaler capex commentary, export-control headlines, AMD share evidence.",
+      nextReview: "Review after each earnings report and after major AI capex updates from MSFT, META, AMZN, GOOGL, and ORCL.",
+    },
+  }),
+  researchRecord({
+    id: "mock-brkb-002",
+    ticker: "BRK.B",
+    companyName: "Berkshire Hathaway Inc.",
+    sector: "Financials",
+    industry: "Diversified Insurance / Conglomerate",
+    marketCap: "~$1.05T",
+    status: "Watching",
+    convictionScore: 6,
+    updatedAt: "2026-05-22T09:15:00.000Z",
+    business: {
+      howItMakesMoney: "Berkshire earns from insurance underwriting and float investment, BNSF railroad, Berkshire Hathaway Energy, manufacturing, services, retail, and a large public-equity portfolio.",
+      keyProducts: "GEICO, Gen Re, BHRG, BNSF, BHE utilities, Precision Castparts, Lubrizol, Marmon, McLane, Pilot/Flying J, and equity holdings.",
+      mainCustomers: "Insurance customers, freight shippers, utility customers, industrial buyers, retail customers, and shareholders relying on capital allocation.",
+      moat: "Low-cost insurance float, fortress balance sheet, decentralized operating culture, advantaged deal flow, and patient capital allocation.",
+    },
+    growth: {
+      nearTerm: "GEICO profitability, insurance pricing, high short-rate investment income, and possible buybacks.",
+      longTerm: "Capital deployment of the cash pile, private acquisitions, energy investments, and steady compounding in operating subsidiaries.",
+    },
+    financial: {
+      revenueTrend: "Operating earnings compound steadily, but growth is slower than high-growth tech. Insurance and investment income are key drivers.",
+      marginTrend: "GEICO margin recovery matters; BNSF and BHE are steadier but can face volume and regulatory pressure.",
+      freeCashFlow: "Excellent cash generation and unusually large liquidity reserve.",
+      debt: "Holding-company leverage is conservative; subsidiary debt is generally manageable.",
+      dilutionBuybacks: "Buybacks are opportunistic, especially when price-to-book is attractive.",
+    },
+    valuation: {
+      currentMultiple: "Often viewed through P/B, operating earnings multiple, and look-through earnings.",
+      peerComparison: "Less comparable to single-line insurers or industrials because Berkshire is a capital-allocation platform.",
+      historicalRange: "Usually attractive when close to 1.2-1.3x book; less compelling as it approaches the high end of its historical range.",
+      cheapFairExpensive: "Fair, but not obviously cheap without a better entry or a large acquisition catalyst.",
+    },
+    expectations: {
+      pricedIn: "Steady operating earnings, strong balance sheet, and continued investment income.",
+      beatScenario: "Large acquisition, stronger GEICO profitability, buybacks at attractive valuation, or equity portfolio strength.",
+      disappointScenario: "BHE liability surprise, weaker insurance cycle, poor capital deployment, or major equity-market drawdown.",
+    },
+    risks: {
+      companySpecific: "Succession risk and BHE wildfire/regulatory exposure.",
+      industry: "Insurance cycle softening and railroad volume pressure.",
+      valuation: "Limited upside if bought at a premium to historical book range.",
+      execution: "The cash pile can become a drag if attractive large deals are unavailable.",
+    },
+    tradingPlan: {
+      whyNowOrWait: "Watchlist name; wait for a better entry unless seeking defensive exposure.",
+      targetEntryZone: "More attractive near 1.3-1.4x book or during broad market weakness.",
+      invalidationCondition: "Unexpected severe BHE liabilities, GEICO deterioration, or poor post-Buffett capital allocation.",
+      timeHorizon: "3-5 years.",
+      starterPositionSize: "Small defensive starter only at attractive valuation.",
+      addTrimRules: "Add below intrinsic-value estimate; trim if valuation stretches without better earnings power.",
+    },
+    finalSummary: {
+      bullCase: "Cash is deployed well, insurance remains strong, and operating businesses compound steadily.",
+      bearCase: "Large liability shock, weak capital deployment, and equity portfolio drawdown compress value.",
+      baseCase: "Reliable defensive compounder, but entry price matters.",
+      conclusion: "High-quality watchlist stock. I want a better margin of safety before making it a major position.",
+    },
+    followUp: {
+      watchItems: "Cash balance, buybacks, GEICO combined ratio, BHE liabilities, acquisition activity, and P/B range.",
+      nextReview: "Review after quarterly operating earnings and annual shareholder letter.",
+    },
+  }),
+];
 
 const STARTER_FOCUS = [
   focusName("MU", "high", "active", "Memory cycle and AI server demand; watch DRAM/NAND pricing and capex discipline."),
@@ -387,6 +647,33 @@ function focusName(symbol, priority = "medium", status = "watching", thesis = ""
   };
 }
 
+function researchRecord(record) {
+  const info = record.basicInfo || {};
+  return {
+    createdAt: record.createdAt || record.updatedAt || new Date().toISOString(),
+    updatedAt: record.updatedAt || new Date().toISOString(),
+    status: record.status || "Watching",
+    convictionScore: Number(record.convictionScore) || 5,
+    basicInfo: {
+      ticker: record.ticker || info.ticker || "",
+      companyName: record.companyName || info.companyName || "",
+      sector: record.sector || info.sector || "",
+      industry: record.industry || info.industry || "",
+      marketCap: record.marketCap || info.marketCap || "",
+    },
+    business: record.business || record.businessUnderstanding || {},
+    growth: record.growth || record.growthDrivers || {},
+    financial: record.financial || record.financialQuality || {},
+    valuation: record.valuation || {},
+    expectations: record.expectations || record.marketExpectations || {},
+    risks: record.risks || {},
+    tradingPlan: record.tradingPlan || {},
+    finalSummary: record.finalSummary || {},
+    followUp: record.followUp || {},
+    id: record.id || newId("research"),
+  };
+}
+
 function calendarEvent(title, status = "watching", type = "other", importance = "medium", date = "", impact = "", action = "") {
   return {
     id: newId("event"),
@@ -485,6 +772,10 @@ function renderTopicList() {
 
 function renderDetail() {
   const item = topicById[state.activeTopic] || filteredTopics()[0] || TOPICS[0];
+  if (!item) {
+    els.topicDetail.innerHTML = `<div class="empty-state-inline">No topic found. Clear the search to return to the map.</div>`;
+    return;
+  }
   state.activeTopic = item.id;
   const category = categoryById[item.category];
   const related = item.related.map((id) => topicById[id]).filter(Boolean);
@@ -722,6 +1013,10 @@ function renderTopicVisual(type) {
 
 function renderGraph() {
   const active = topicById[state.activeTopic] || TOPICS[0];
+  if (!active) {
+    els.graph.innerHTML = "";
+    return;
+  }
   const first = active.related.map((id) => topicById[id]).filter(Boolean);
   const second = first.flatMap((item) => item.related.map((id) => topicById[id]).filter(Boolean));
   const nodes = uniqueById([active, ...first, ...second]).slice(0, 24);
@@ -776,13 +1071,21 @@ function renderPageTitle() {
   els.pageTitle.textContent = state.activeCategory === "all" ? "All Topics" : categoryById[state.activeCategory].zh;
 }
 
+function safeRun(label, fn) {
+  try {
+    fn();
+  } catch (error) {
+    console.error(`${label} failed`, error);
+  }
+}
+
 function render() {
-  renderPageTitle();
-  renderCategoryNav();
-  renderSummary();
-  renderTopicList();
-  renderDetail();
-  renderGraph();
+  safeRun("renderPageTitle", renderPageTitle);
+  safeRun("renderCategoryNav", renderCategoryNav);
+  safeRun("renderSummary", renderSummary);
+  safeRun("renderTopicList", renderTopicList);
+  safeRun("renderDetail", renderDetail);
+  safeRun("renderGraph", renderGraph);
 }
 
 function selectCategory(categoryId) {
@@ -808,10 +1111,12 @@ function setView(view) {
   els.mapView.classList.toggle("hidden", view !== "map");
   els.labView.classList.toggle("hidden", view !== "lab");
   els.focusView.classList.toggle("hidden", view !== "focus");
+  els.researchView.classList.toggle("hidden", view !== "research");
   els.calendarView.classList.toggle("hidden", view !== "calendar");
   els.newsView.classList.toggle("hidden", view !== "news");
   if (view === "lab") renderPayoff();
   if (view === "focus") renderFocus();
+  if (view === "research") renderResearch();
   if (view === "calendar") renderCalendar();
   if (view === "news") renderNews();
 }
@@ -911,6 +1216,270 @@ function saveFocus() {
     FOCUS_KEY,
     JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), items: state.focusList }),
   );
+}
+
+function loadResearch() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(RESEARCH_KEY) || "null");
+    const items = Array.isArray(saved?.state?.items)
+      ? saved.state.items
+      : Array.isArray(saved?.items)
+        ? saved.items
+        : Array.isArray(saved)
+          ? saved
+          : [];
+    state.researchItems = items.length ? items.map(researchRecord) : STARTER_RESEARCH;
+  } catch {
+    state.researchItems = STARTER_RESEARCH;
+  }
+  if (!state.activeResearchId) state.activeResearchId = state.researchItems[0]?.id || "";
+  saveResearch();
+}
+
+function saveResearch() {
+  localStorage.setItem(
+    RESEARCH_KEY,
+    JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), state: { items: state.researchItems } }),
+  );
+}
+
+function researchById(id) {
+  return state.researchItems.find((item) => item.id === id);
+}
+
+function filteredResearch() {
+  if (state.researchFilter === "All") return state.researchItems;
+  return state.researchItems.filter((item) => item.status === state.researchFilter);
+}
+
+function statusClass(status) {
+  return status.toLowerCase().replaceAll(" ", "-");
+}
+
+function convictionClass(score) {
+  if (score >= 8) return "high";
+  if (score >= 5) return "medium";
+  return "low";
+}
+
+function renderResearch() {
+  renderResearchFilters();
+  renderResearchStats();
+  renderResearchCards();
+  renderResearchDetail();
+  renderResearchFormShell();
+}
+
+function renderResearchFilters() {
+  const counts = state.researchItems.reduce((acc, item) => {
+    acc[item.status] = (acc[item.status] || 0) + 1;
+    return acc;
+  }, { All: state.researchItems.length });
+
+  els.researchFilters.innerHTML = RESEARCH_STATUSES.map((status) => `
+    <button class="research-filter ${state.researchFilter === status ? "active" : ""}" data-research-filter="${status}" type="button">
+      <span>${status}</span>
+      <strong>${counts[status] || 0}</strong>
+    </button>
+  `).join("");
+}
+
+function renderResearchStats() {
+  const items = state.researchItems;
+  const avg = items.length
+    ? (items.reduce((sum, item) => sum + Number(item.convictionScore || 0), 0) / items.length).toFixed(1)
+    : "0.0";
+  const ready = items.filter((item) => item.status === "Ready to Buy").length;
+  const researching = items.filter((item) => item.status === "Researching").length;
+  els.researchStats.innerHTML = [
+    ["Research Files", items.length],
+    ["Avg Conviction", avg],
+    ["Ready to Buy", ready],
+    ["Researching", researching],
+  ].map(([label, value]) => `<div class="portfolio-stat"><span>${label}</span><strong>${value}</strong></div>`).join("");
+}
+
+function renderResearchCards() {
+  const items = filteredResearch();
+  els.researchCount.textContent = `${items.length} shown`;
+
+  if (!items.length) {
+    els.researchCards.innerHTML = `<div class="empty-state-inline">No research with status "${state.researchFilter}".</div>`;
+    return;
+  }
+
+  els.researchCards.innerHTML = items.map((item) => {
+    const info = item.basicInfo;
+    const conclusion = item.finalSummary?.conclusion || "No conclusion yet.";
+    return `
+      <button class="research-card ${state.activeResearchId === item.id ? "active" : ""}" data-research-id="${item.id}" type="button">
+        <div class="research-card-top">
+          <div>
+            <strong>${info.ticker}</strong>
+            <span>${info.companyName || "Unnamed company"}</span>
+          </div>
+          <span class="status-badge ${statusClass(item.status)}">${item.status}</span>
+        </div>
+        <div class="research-card-meta">
+          <span>${info.sector || "Sector TBD"}</span>
+          <span class="conviction ${convictionClass(item.convictionScore)}">${item.convictionScore}/10</span>
+        </div>
+        <p>${conclusion}</p>
+      </button>
+    `;
+  }).join("");
+}
+
+function renderResearchDetail() {
+  const item = researchById(state.activeResearchId) || filteredResearch()[0] || state.researchItems[0];
+  if (!item) {
+    els.researchUpdated.textContent = "";
+    els.researchDetail.innerHTML = `<div class="empty-state-inline">Start a new research file to use the 9-section template.</div>`;
+    return;
+  }
+  state.activeResearchId = item.id;
+  const info = item.basicInfo;
+  els.researchUpdated.textContent = `Updated ${formatShortDate(item.updatedAt)}`;
+  els.researchDetail.innerHTML = `
+    <div class="research-detail-head">
+      <div>
+        <p class="eyebrow">${info.sector || "Research"}</p>
+        <h3>${info.ticker} · ${info.companyName || "Company"}</h3>
+        <p>${info.industry || ""}${info.marketCap ? ` · ${info.marketCap}` : ""}</p>
+      </div>
+      <div class="research-detail-badges">
+        <span class="status-badge ${statusClass(item.status)}">${item.status}</span>
+        <span class="conviction ${convictionClass(item.convictionScore)}">${item.convictionScore}/10 conviction</span>
+      </div>
+    </div>
+    <div class="research-section-list">
+      ${RESEARCH_SECTIONS.map((section) => renderResearchSection(item, section)).join("")}
+    </div>
+    <div class="research-detail-actions">
+      <button class="mini-btn" data-edit-research="${item.id}" type="button">Edit</button>
+      <button class="mini-btn danger" data-delete-research="${item.id}" type="button">Delete</button>
+    </div>
+  `;
+}
+
+function renderResearchSection(item, section) {
+  const data = item[section.id] || {};
+  return `
+    <section class="research-section-card">
+      <h4>${section.title}<span>${section.subtitle}</span></h4>
+      <div class="research-field-grid">
+        ${section.fields.map(([key, label]) => `
+          <div>
+            <strong>${label}</strong>
+            <p>${data[key] || "TBD"}</p>
+          </div>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderResearchFormShell() {
+  if (els.researchSectionFields.dataset.ready === "true") return;
+  els.researchSectionFields.innerHTML = RESEARCH_SECTIONS.filter((section) => section.id !== "basicInfo").map((section) => `
+    <fieldset class="research-form-section">
+      <legend>${section.title}<span>${section.subtitle}</span></legend>
+      ${section.fields.map(([key, label]) => `
+        <label>
+          <span>${label}</span>
+          <textarea data-research-section="${section.id}" data-research-field="${key}" rows="3"></textarea>
+        </label>
+      `).join("")}
+    </fieldset>
+  `).join("");
+  els.researchSectionFields.dataset.ready = "true";
+  updateConvictionLabel();
+}
+
+function clearResearchForm() {
+  els.researchForm.reset();
+  els.researchId.value = "";
+  els.researchConviction.value = "5";
+  updateConvictionLabel();
+  els.researchSectionFields.querySelectorAll("textarea").forEach((field) => {
+    field.value = "";
+  });
+}
+
+function fillResearchForm(item) {
+  renderResearchFormShell();
+  els.researchId.value = item.id;
+  els.researchTicker.value = item.basicInfo.ticker || "";
+  els.researchCompany.value = item.basicInfo.companyName || "";
+  els.researchStatus.value = item.status || "Watching";
+  els.researchConviction.value = item.convictionScore || 5;
+  els.researchSector.value = item.basicInfo.sector || "";
+  els.researchIndustry.value = item.basicInfo.industry || "";
+  els.researchMarketCap.value = item.basicInfo.marketCap || "";
+  els.researchSectionFields.querySelectorAll("textarea").forEach((field) => {
+    field.value = item[field.dataset.researchSection]?.[field.dataset.researchField] || "";
+  });
+  updateConvictionLabel();
+  els.researchTicker.focus();
+}
+
+function formResearch() {
+  const now = new Date().toISOString();
+  const id = els.researchId.value || newId("research");
+  const existing = researchById(id);
+  const record = researchRecord({
+    id,
+    createdAt: existing?.createdAt || now,
+    updatedAt: now,
+    ticker: els.researchTicker.value.trim().toUpperCase(),
+    companyName: els.researchCompany.value.trim(),
+    sector: els.researchSector.value.trim(),
+    industry: els.researchIndustry.value.trim(),
+    marketCap: els.researchMarketCap.value.trim(),
+    status: els.researchStatus.value,
+    convictionScore: Number(els.researchConviction.value),
+  });
+  els.researchSectionFields.querySelectorAll("textarea").forEach((field) => {
+    const section = field.dataset.researchSection;
+    const key = field.dataset.researchField;
+    record[section][key] = field.value.trim();
+  });
+  return record;
+}
+
+function updateConvictionLabel() {
+  els.researchConvictionValue.textContent = `${els.researchConviction.value} / 10`;
+}
+
+function formatShortDate(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+}
+
+function exportResearch() {
+  downloadJson("market-knowledge-research.json", {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    items: state.researchItems,
+  });
+}
+
+function importResearch(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+      if (!items.length) throw new Error("No research items");
+      state.researchItems = items.map(researchRecord);
+      state.activeResearchId = state.researchItems[0]?.id || "";
+      saveResearch();
+      renderResearch();
+    } catch {
+      window.alert("Could not import this research file.");
+    }
+  };
+  reader.readAsText(file);
 }
 
 function loadCalendar() {
@@ -1398,24 +1967,22 @@ function clearCalendarForm() {
   els.eventStatus.value = "rumor";
 }
 
-function exportFocus() {
-  const blob = new Blob([JSON.stringify({ version: 1, items: state.focusList }, null, 2)], { type: "application/json" });
+function downloadJson(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `market-focus-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
 }
 
+function exportFocus() {
+  downloadJson(`market-focus-${new Date().toISOString().slice(0, 10)}.json`, { version: 1, items: state.focusList });
+}
+
 function exportCalendar() {
-  const blob = new Blob([JSON.stringify({ version: 1, events: state.calendar }, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `market-calendar-${new Date().toISOString().slice(0, 10)}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
+  downloadJson(`market-calendar-${new Date().toISOString().slice(0, 10)}.json`, { version: 1, events: state.calendar });
 }
 
 function importFocus(file) {
@@ -1508,6 +2075,72 @@ els.viewTabs.forEach((tab) => {
 els.focusBtn.addEventListener("click", () => {
   state.activeCategory = "all";
   render();
+});
+
+els.researchFilters.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-research-filter]");
+  if (!button) return;
+  state.researchFilter = button.dataset.researchFilter;
+  const visible = filteredResearch();
+  if (!visible.some((item) => item.id === state.activeResearchId)) {
+    state.activeResearchId = visible[0]?.id || state.researchItems[0]?.id || "";
+  }
+  renderResearch();
+});
+
+els.researchCards.addEventListener("click", (event) => {
+  const card = event.target.closest("[data-research-id]");
+  if (!card) return;
+  state.activeResearchId = card.dataset.researchId;
+  renderResearchCards();
+  renderResearchDetail();
+});
+
+els.researchDetail.addEventListener("click", (event) => {
+  const edit = event.target.closest("[data-edit-research]");
+  const del = event.target.closest("[data-delete-research]");
+  if (edit) {
+    const item = researchById(edit.dataset.editResearch);
+    if (item) fillResearchForm(item);
+  }
+  if (del) {
+    const item = researchById(del.dataset.deleteResearch);
+    if (!item || !window.confirm(`Delete research for ${item.basicInfo.ticker}?`)) return;
+    state.researchItems = state.researchItems.filter((research) => research.id !== item.id);
+    state.activeResearchId = state.researchItems[0]?.id || "";
+    saveResearch();
+    renderResearch();
+  }
+});
+
+els.researchConviction.addEventListener("input", updateConvictionLabel);
+
+els.newResearchBtn.addEventListener("click", clearResearchForm);
+els.clearResearchFormBtn.addEventListener("click", clearResearchForm);
+els.exportResearchBtn.addEventListener("click", exportResearch);
+
+els.importResearchInput.addEventListener("change", (event) => {
+  const [file] = event.target.files;
+  if (file) importResearch(file);
+  event.target.value = "";
+});
+
+els.researchForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const item = formResearch();
+  if (!item.basicInfo.ticker) {
+    window.alert("Please enter a ticker.");
+    return;
+  }
+  const index = state.researchItems.findIndex((research) => research.id === item.id);
+  if (index >= 0) {
+    state.researchItems[index] = item;
+  } else {
+    state.researchItems.unshift(item);
+  }
+  state.activeResearchId = item.id;
+  saveResearch();
+  renderResearch();
 });
 
 [els.strategySelect, els.spotInput, els.strikeInput, els.premiumInput].forEach((input) => {
@@ -1622,11 +2255,13 @@ els.newsFilter.addEventListener("input", renderNews);
 els.newsLookback.addEventListener("change", renderNews);
 els.newsTickers.addEventListener("input", renderNews);
 
-loadFinnhubKey();
-loadFocus();
-loadCalendar();
 render();
-renderPayoff();
-renderFocus();
-renderCalendar();
-renderNews();
+safeRun("loadFinnhubKey", loadFinnhubKey);
+safeRun("loadFocus", loadFocus);
+safeRun("loadResearch", loadResearch);
+safeRun("loadCalendar", loadCalendar);
+safeRun("renderPayoff", renderPayoff);
+safeRun("renderFocus", renderFocus);
+safeRun("renderResearch", renderResearch);
+safeRun("renderCalendar", renderCalendar);
+safeRun("renderNews", renderNews);

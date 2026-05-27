@@ -14,7 +14,7 @@
       content="Explore stocks, options, market mechanics, Greeks, risk, macro, data tools, and quant models."
     />
     <meta property="og:type" content="website" />
-    <link rel="stylesheet" href="styles.css?v=news-colors-20260522" />
+    <link rel="stylesheet" href="styles.css?v=ytrade-research-20260526" />
   </head>
   <body>
     <div class="app-shell">
@@ -45,6 +45,7 @@
             <button class="view-tab active" data-view="map" type="button">Map</button>
             <button class="view-tab" data-view="lab" type="button">Strategy Lab</button>
             <button class="view-tab" data-view="focus" type="button">Focus</button>
+            <button class="view-tab" data-view="research" type="button">Research</button>
             <button class="view-tab" data-view="calendar" type="button">Calendar</button>
             <button class="view-tab" data-view="news" type="button">News</button>
           </div>
@@ -226,6 +227,96 @@
           </section>
         </section>
 
+        <section id="researchView" class="view-panel hidden">
+          <section class="portfolio-workspace research-workspace">
+            <div class="portfolio-header">
+              <div>
+                <p class="eyebrow">YTrade Research System</p>
+                <h3>Stock Research Dashboard</h3>
+              </div>
+              <div class="portfolio-actions">
+                <button id="newResearchBtn" class="mini-btn" type="button">New Research</button>
+                <button id="exportResearchBtn" class="mini-btn" type="button">Export</button>
+                <label class="mini-btn import-btn">
+                  Import
+                  <input id="importResearchInput" type="file" accept="application/json" />
+                </label>
+              </div>
+            </div>
+
+            <div id="researchStats" class="portfolio-stats"></div>
+
+            <div class="research-filters" id="researchFilters" aria-label="Research status filters"></div>
+
+            <div class="research-grid">
+              <article class="portfolio-panel research-dashboard">
+                <div class="pane-head">
+                  <span>Companies</span>
+                  <span id="researchCount"></span>
+                </div>
+                <div id="researchCards" class="research-cards"></div>
+              </article>
+
+              <article class="portfolio-panel research-detail-panel">
+                <div class="pane-head">
+                  <span>Research File</span>
+                  <span id="researchUpdated"></span>
+                </div>
+                <div id="researchDetail" class="research-detail"></div>
+              </article>
+            </div>
+
+            <article class="portfolio-panel research-editor-panel">
+              <div class="pane-head">
+                <span>9-section Research Template</span>
+                <button id="clearResearchFormBtn" class="mini-btn" type="button">Clear</button>
+              </div>
+              <form id="researchForm" class="research-form">
+                <input id="researchId" type="hidden" />
+                <div class="research-form-top">
+                  <label>
+                    <span>Ticker</span>
+                    <input id="researchTicker" type="text" placeholder="NVDA" required />
+                  </label>
+                  <label>
+                    <span>Company</span>
+                    <input id="researchCompany" type="text" placeholder="NVIDIA Corporation" />
+                  </label>
+                  <label>
+                    <span>Status</span>
+                    <select id="researchStatus">
+                      <option>Watching</option>
+                      <option>Researching</option>
+                      <option>Ready to Buy</option>
+                      <option>Hold</option>
+                      <option>Avoid</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Conviction Score</span>
+                    <input id="researchConviction" type="range" min="1" max="10" value="5" />
+                    <strong id="researchConvictionValue">5 / 10</strong>
+                  </label>
+                  <label>
+                    <span>Sector</span>
+                    <input id="researchSector" type="text" placeholder="Technology" />
+                  </label>
+                  <label>
+                    <span>Industry</span>
+                    <input id="researchIndustry" type="text" placeholder="Semiconductors" />
+                  </label>
+                  <label>
+                    <span>Market Cap</span>
+                    <input id="researchMarketCap" type="text" placeholder="~$2.7T" />
+                  </label>
+                </div>
+                <div id="researchSectionFields" class="research-section-fields"></div>
+                <button class="primary-btn" type="submit">Save Research</button>
+              </form>
+            </article>
+          </section>
+        </section>
+
         <section id="calendarView" class="view-panel hidden">
           <section class="portfolio-workspace">
             <div class="portfolio-header">
@@ -367,6 +458,6 @@
       </main>
     </div>
 
-    <script src="app.js?v=remove-portfolio-20260526"></script>
+    <script src="app.js?v=ytrade-research-20260526"></script>
   </body>
 </html>

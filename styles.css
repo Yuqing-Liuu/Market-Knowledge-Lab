@@ -210,6 +210,7 @@ button {
 
 .topbar-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 4px;
   border: 1px solid var(--line);
@@ -1288,6 +1289,298 @@ ul {
   color: #fff;
 }
 
+.research-workspace {
+  gap: 18px;
+}
+
+.research-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.research-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--soft);
+  cursor: pointer;
+}
+
+.research-filter.active {
+  border-color: rgba(78, 121, 216, 0.45);
+  background: #f3f6ff;
+  color: var(--blue);
+}
+
+.research-filter strong {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(78, 121, 216, 0.1);
+  font-size: 12px;
+}
+
+.research-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.35fr);
+  gap: 18px;
+}
+
+.research-cards {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.research-card {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ffffff 0%, #fff8fb 100%);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(103, 118, 135, 0.08);
+}
+
+.research-card.active {
+  border-color: rgba(216, 111, 145, 0.45);
+  box-shadow: 0 14px 30px rgba(216, 111, 145, 0.12);
+}
+
+.research-card-top,
+.research-card-meta,
+.research-detail-head,
+.research-detail-badges,
+.research-detail-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.research-card strong {
+  display: block;
+  font-size: 22px;
+}
+
+.research-card span,
+.research-card p,
+.research-detail p,
+.research-section-card span {
+  color: var(--muted);
+}
+
+.research-card p {
+  margin: 12px 0 0;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.status-badge,
+.conviction {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.status-badge.watching {
+  color: var(--blue);
+  border-color: rgba(78, 121, 216, 0.28);
+  background: #f4f7ff;
+}
+
+.status-badge.researching {
+  color: var(--violet);
+  border-color: rgba(127, 107, 216, 0.28);
+  background: #f7f4ff;
+}
+
+.status-badge.ready-to-buy,
+.status-badge.hold {
+  color: var(--green);
+  border-color: rgba(45, 156, 115, 0.28);
+  background: #f2fbf6;
+}
+
+.status-badge.avoid,
+.conviction.low {
+  color: var(--red);
+  border-color: rgba(215, 95, 103, 0.28);
+  background: #fff5f6;
+}
+
+.conviction.high {
+  color: var(--green);
+  border-color: rgba(45, 156, 115, 0.28);
+  background: #f2fbf6;
+}
+
+.conviction.medium {
+  color: var(--amber);
+  border-color: rgba(195, 139, 46, 0.28);
+  background: #fffaf0;
+}
+
+.research-detail {
+  padding: 18px;
+}
+
+.research-detail-head {
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.research-detail-head h3 {
+  margin: 4px 0;
+  font-size: 32px;
+}
+
+.research-section-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.research-section-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.research-section-card h4 {
+  margin: 0 0 12px;
+  color: var(--rose);
+  font-size: 17px;
+}
+
+.research-section-card h4 span,
+.research-form-section legend span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.research-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.research-field-grid div {
+  padding: 12px;
+  border: 1px solid rgba(207, 217, 228, 0.72);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.research-field-grid strong {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12px;
+  color: var(--soft);
+}
+
+.research-field-grid p {
+  margin: 0;
+  line-height: 1.65;
+}
+
+.research-detail-actions {
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.mini-btn.danger {
+  color: var(--red);
+}
+
+.research-form {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+}
+
+.research-form-top {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.research-form label,
+.research-form-section {
+  display: grid;
+  gap: 7px;
+}
+
+.research-form label span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.research-form input,
+.research-form select,
+.research-form textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  padding: 11px 12px;
+}
+
+.research-form textarea {
+  resize: vertical;
+  min-height: 92px;
+  line-height: 1.55;
+}
+
+.research-section-fields {
+  display: grid;
+  gap: 16px;
+}
+
+.research-form-section {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.research-form-section legend {
+  padding: 0 8px;
+  color: var(--rose);
+  font-weight: 800;
+}
+
+.empty-state-inline {
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
 .hidden {
   display: none;
 }
@@ -1329,7 +1622,11 @@ ul {
   .flow,
   .news-controls,
   .portfolio-stats,
-  .portfolio-grid {
+  .portfolio-grid,
+  .research-grid,
+  .research-form-top,
+  .research-form-section,
+  .research-field-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1360,7 +1657,8 @@ ul {
 
   .topbar,
   .detail-head,
-  .portfolio-header {
+  .portfolio-header,
+  .research-detail-head {
     align-items: stretch;
     flex-direction: column;
   }
@@ -1377,7 +1675,11 @@ ul {
   .holding-metrics,
   .focus-meta,
   .calendar-card,
-  .portfolio-form {
+  .portfolio-form,
+  .research-card-top,
+  .research-card-meta,
+  .research-detail-badges {
     grid-template-columns: 1fr;
+    flex-direction: column;
   }
 }
